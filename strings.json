@@ -1,0 +1,14 @@
+{"config": {
+    "step": {
+        "user": {
+            "data": {
+                "zone": "Zone"
+            },
+            "description": "Select your zone for prayer times calculation.",
+            "title": "eSolat Takwim Malaysia"
+        }
+    },
+    "abort": {
+        "single_instance_allowed": "[%key:common::config_flow::abort::single_instance_allowed%]"
+    }
+}}
