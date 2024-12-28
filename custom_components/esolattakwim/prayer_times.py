@@ -94,7 +94,7 @@ class PrayerTimesData:
                                             end = date.replace(hour=end_hour, minute=end_minute)
                                             
                                             event = CalendarEvent(
-                                                summary=f"{display_name} Prayer",
+                                                summary=f"{display_name}",
                                                 start=start,
                                                 end=end,
                                             )
