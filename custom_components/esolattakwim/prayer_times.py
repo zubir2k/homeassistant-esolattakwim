@@ -36,6 +36,37 @@ class PrayerTimesData:
         prayer_times = self.get_todays_prayer_times()
         return get_next_prayer_info(prayer_times)
 
+    def get_prayer_times_utc(self) -> dict[str, str]:
+        """Get prayer times for today in UTC format."""
+        today = dt.now(TIMEZONE).strftime("%d-%b-%Y")
+        local_prayer_times = self._daily_prayer_times.get(today, {})
+        utc_prayer_times = {}
+        
+        today_date = dt.now(TIMEZONE).date()
+        
+        for prayer, time_str in local_prayer_times.items():
+            try:
+                # Parse the local time
+                time_parts = time_str.split(":")
+                if len(time_parts) >= 2:
+                    hour = int(time_parts[0])
+                    minute = int(time_parts[1])
+                    second = int(time_parts[2]) if len(time_parts) > 2 else 0
+                    
+                    # Create datetime in local timezone
+                    local_dt = datetime.combine(
+                        today_date,
+                        datetime.strptime(f"{hour:02d}:{minute:02d}:{second:02d}", "%H:%M:%S").time()
+                    ).replace(tzinfo=TIMEZONE)
+                    
+                    # Convert to UTC
+                    utc_dt = local_dt.astimezone(dt.UTC)
+                    utc_prayer_times[prayer] = utc_dt.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+            except (ValueError, IndexError):
+                utc_prayer_times[prayer] = None
+                
+        return utc_prayer_times
+
     async def fetch_prayer_times(self, session: aiohttp.ClientSession) -> bool:
         """Fetch prayer times for the current year."""
         current_year = dt.now(TIMEZONE).year
