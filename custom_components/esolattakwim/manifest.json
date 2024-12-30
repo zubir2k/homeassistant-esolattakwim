@@ -6,9 +6,6 @@
   "documentation": "https://github.com/zubir2k/homeassistant-esolattakwim",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/zubir2k/homeassistant-esolattakwim/issues",
-  "requirements": [
-    "aiohttp>=3.8.0",
-    "voluptuous>=0.13.1"
-  ],
+  "requirements": ["aiohttp>=3.8.0","voluptuous>=0.13.1"],
   "version": "0.1.0-beta2"
 }
