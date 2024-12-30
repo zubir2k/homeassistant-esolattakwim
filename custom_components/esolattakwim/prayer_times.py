@@ -1,11 +1,11 @@
 """Prayer times data handling for eSolat Takwim Malaysia."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 from typing import Dict, Optional, Tuple
-
 import aiohttp
+from aiohttp import FormData
 
 from homeassistant.components.calendar import CalendarEvent
 from homeassistant.util import dt
@@ -46,20 +46,17 @@ class PrayerTimesData:
         
         for prayer, time_str in local_prayer_times.items():
             try:
-                # Parse the local time
                 time_parts = time_str.split(":")
                 if len(time_parts) >= 2:
                     hour = int(time_parts[0])
                     minute = int(time_parts[1])
                     second = int(time_parts[2]) if len(time_parts) > 2 else 0
                     
-                    # Create datetime in local timezone
                     local_dt = datetime.combine(
                         today_date,
                         datetime.strptime(f"{hour:02d}:{minute:02d}:{second:02d}", "%H:%M:%S").time()
                     ).replace(tzinfo=TIMEZONE)
                     
-                    # Convert to UTC
                     utc_dt = local_dt.astimezone(dt.UTC)
                     utc_prayer_times[prayer] = utc_dt.strftime("%Y-%m-%dT%H:%M:%S+00:00")
             except (ValueError, IndexError):
@@ -68,8 +65,9 @@ class PrayerTimesData:
         return utc_prayer_times
 
     async def fetch_prayer_times(self, session: aiohttp.ClientSession) -> bool:
-        """Fetch prayer times for the current year."""
+        """Fetch prayer times for the current year, and next year if needed."""
         current_year = dt.now(TIMEZONE).year
+        current_month = dt.now(TIMEZONE).month
 
         # Only update if we haven't fetched this year's data yet
         if self._last_update_year == current_year:
@@ -77,72 +75,84 @@ class PrayerTimesData:
 
         try:
             url = PRAYER_TIMES_API.format(zone=self._zone)
-            async with session.get(url) as response:
-                if response.status != 200:
-                    _LOGGER.error("Failed to get prayer times from eSolat API")
-                    return False
 
-                data = await response.json()
-                if data.get("status") != "OK!":
-                    _LOGGER.error("Invalid response from eSolat Prayer Times API")
-                    return False
+            async def fetch_yearly_prayer_times(year: int):
+                """Helper function to fetch prayer times for a specific year."""
+                start_date = datetime(year, 1, 1)
+                end_date = datetime(year, 12, 31)
 
-                self._prayer_times = {}
-                self._daily_prayer_times = {}
-                
-                for prayer_time in data.get("prayerTime", []):
-                    try:
-                        date_str = prayer_time["date"]
-                        date = datetime.strptime(date_str, "%d-%b-%Y").replace(tzinfo=TIMEZONE)
+                form_data = FormData()
+                form_data.add_field('datestart', start_date.strftime('%Y-%m-%d'))
+                form_data.add_field('dateend', end_date.strftime('%Y-%m-%d'))
 
-                        # Store daily prayer times
-                        prayer_dict = {}
-                        for prayer in PRAYER_NAMES:
-                            if prayer in prayer_time:
-                                prayer_dict[prayer] = prayer_time[prayer]
-                        self._daily_prayer_times[date_str] = prayer_dict
+                async with session.post(url, data=form_data) as response:
+                    if response.status != 200:
+                        _LOGGER.error("Failed to get prayer times for year %d from eSolat API", year)
+                        return False
 
-                        # Create calendar events for each prayer time
-                        for prayer, display_name in PRAYER_NAMES.items():
-                            if prayer in prayer_time:
-                                try:
-                                    time_str = prayer_time[prayer]
-                                    time_parts = time_str.split(":")
-                                    if len(time_parts) >= 2:
-                                        hour = int(time_parts[0])
-                                        minute = int(time_parts[1])
-                                        
-                                        # Ensure valid hour and minute values
-                                        if 0 <= hour <= 23 and 0 <= minute <= 59:
-                                            start = date.replace(hour=hour, minute=minute)
-                                            # Prayer events last for 15 minutes, but ensure we don't overflow
-                                            end_minute = (minute + 15) % 60
-                                            end_hour = hour + ((minute + 15) // 60)
-                                            if end_hour > 23:
-                                                end_hour = 23
-                                                end_minute = 59
-                                            
-                                            end = date.replace(hour=end_hour, minute=end_minute)
-                                            
-                                            event = CalendarEvent(
-                                                summary=f"{display_name}",
-                                                start=start,
-                                                end=end,
-                                            )
-                                            
-                                            if prayer not in self._prayer_times:
-                                                self._prayer_times[prayer] = []
-                                            self._prayer_times[prayer].append(event)
-                                except (ValueError, IndexError) as err:
-                                    _LOGGER.error("Error parsing time %s: %s", time_str, err)
-                                    continue
-                                
-                    except (KeyError, ValueError) as err:
-                        _LOGGER.error("Error parsing prayer time: %s", err)
-                        continue
+                    data = await response.json()
+                    if data.get("status") != "OK!":
+                        _LOGGER.error("Invalid response from eSolat Prayer Times API for year %d", year)
+                        return False
 
-                self._last_update_year = current_year
-                return True
+                    for prayer_time in data.get("prayerTime", []):
+                        try:
+                            date_str = prayer_time["date"]
+                            date = datetime.strptime(date_str, "%d-%b-%Y").replace(tzinfo=TIMEZONE)
+
+                            # Store daily prayer times
+                            prayer_dict = {}
+                            for prayer in PRAYER_NAMES:
+                                if prayer in prayer_time:
+                                    prayer_dict[prayer] = prayer_time[prayer]
+                            self._daily_prayer_times[date_str] = prayer_dict
+
+                            # Create calendar events for each prayer time
+                            for prayer, display_name in PRAYER_NAMES.items():
+                                if prayer in prayer_time:
+                                    try:
+                                        time_str = prayer_time[prayer]
+                                        time_parts = time_str.split(":")
+                                        if len(time_parts) >= 2:
+                                            hour = int(time_parts[0])
+                                            minute = int(time_parts[1])
+
+                                            if 0 <= hour <= 23 and 0 <= minute <= 59:
+                                                start = date.replace(hour=hour, minute=minute)
+                                                end_minute = (minute + 15) % 60
+                                                end_hour = hour + ((minute + 15) // 60)
+                                                if end_hour > 23:
+                                                    end_hour = 23
+                                                    end_minute = 59
+
+                                                end = date.replace(hour=end_hour, minute=end_minute)
+
+                                                event = CalendarEvent(
+                                                    summary=f"{display_name}",
+                                                    start=start,
+                                                    end=end,
+                                                )
+
+                                                if prayer not in self._prayer_times:
+                                                    self._prayer_times[prayer] = []
+                                                self._prayer_times[prayer].append(event)
+                                    except (ValueError, IndexError) as err:
+                                        _LOGGER.error("Error parsing time %s: %s", time_str, err)
+                                        continue
+                        except (KeyError, ValueError) as err:
+                            _LOGGER.error("Error parsing prayer time: %s", err)
+                            continue
+                    return True
+
+            # Fetch data for the current year
+            await fetch_yearly_prayer_times(current_year)
+
+            # If it's December, fetch data for the next year
+            if current_month == 12:
+                await fetch_yearly_prayer_times(current_year + 1)
+
+            self._last_update_year = current_year
+            return True
 
         except (aiohttp.ClientError, Exception) as err:
             _LOGGER.error("Error fetching prayer times: %s", err)
