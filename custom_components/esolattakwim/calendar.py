@@ -44,12 +44,18 @@ class EsolatCalendar(CalendarEntity):
         self._attr_extra_state_attributes = {
             "hijri_date": None,
             "hijri_full": None,
-            "next_prayer": None,
-            "next_prayer_time": None,
-            "todays_prayer_times": {},
+            "next": None,
+            #"next_time": None,
+            "imsak": None,
+            "fajr": None,
+            "syuruk": None,
+            "dhuhr": None,
+            "asr": None,
+            "maghrib": None,
+            "isha": None,
             "zone": zone
         }
-
+               
     @property
     def event(self) -> CalendarEvent | None:
         """Return the next upcoming event."""
@@ -109,10 +115,12 @@ class EsolatCalendar(CalendarEntity):
 
                 # Update prayer time attributes
                 next_prayer_name, next_prayer_time = self._prayer_times.get_next_prayer()
+                prayer_times = self._prayer_times.get_prayer_times_utc()
+                
                 self._attr_extra_state_attributes.update({
-                    "next_prayer": next_prayer_name or "Unknown",
-                    "next_prayer_time": next_prayer_time or "Unknown",
-                    "todays_prayer_times": self._prayer_times.get_todays_prayer_times() or {},
+                    "next": next_prayer_name or "Unknown",
+                    #"next_time": next_prayer_time or "Unknown",
+                    **prayer_times
                 })
 
                 # Fetch Hijri date
