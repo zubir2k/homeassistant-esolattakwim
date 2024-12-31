@@ -1,12 +1,11 @@
 """Support for eSolat Takwim Malaysia Calendar."""
 from __future__ import annotations
 
-import asyncio
-from datetime import datetime
 import logging
-from typing import Any
-
+import asyncio
 import aiohttp
+from datetime import datetime
+from typing import Any
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.config_entries import ConfigEntry
@@ -14,7 +13,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt
 
-from .const import DOMAIN, HIJRI_API, ISLAMIC_EVENTS_API, TIMEZONE, HIJRI_MONTHS, PRAYER_TIMES_API
+from .const import DOMAIN, ISLAMIC_EVENTS_API, TIMEZONE, HIJRI_MONTHS, PRAYER_TIMES_API
 from .prayer_times import PrayerTimesData
 
 _LOGGER = logging.getLogger(__name__)
@@ -44,8 +43,8 @@ class EsolatCalendar(CalendarEntity):
         self._attr_extra_state_attributes = {
             "hijri_date": None,
             "hijri_full": None,
+            "current": None,
             "next": None,
-            #"next_time": None,
             "imsak": None,
             "fajr": None,
             "syuruk": None,
@@ -53,9 +52,9 @@ class EsolatCalendar(CalendarEntity):
             "asr": None,
             "maghrib": None,
             "isha": None,
-            "zone": zone
+            "zone": zone,
         }
-               
+
     @property
     def event(self) -> CalendarEvent | None:
         """Return the next upcoming event."""
@@ -84,28 +83,6 @@ class EsolatCalendar(CalendarEntity):
             or start_date <= event.end <= end_date
         ]
 
-    async def _fetch_hijri_date(self, session: aiohttp.ClientSession) -> str | None:
-        """Fetch current Hijri date."""
-        try:
-            current_date = dt.now(TIMEZONE).strftime("%Y-%m-%d")
-            url = f"{HIJRI_API}&date={current_date}"
-            
-            async with session.get(url) as response:
-                if response.status != 200:
-                    _LOGGER.error("Failed to get Hijri date from eSolat API")
-                    return None
-
-                data = await response.json()
-                if data.get("status") != "OK!":
-                    _LOGGER.error("Invalid response from E-Solat Hijri API")
-                    return None
-
-                return data.get("takwim", {}).get(current_date)
-
-        except (aiohttp.ClientError, asyncio.TimeoutError, KeyError) as err:
-            _LOGGER.error("Error fetching Hijri date: %s", err)
-            return None
-
     async def async_update(self) -> None:
         """Update events and Hijri date."""
         try:
@@ -114,27 +91,27 @@ class EsolatCalendar(CalendarEntity):
                 await self._prayer_times.fetch_prayer_times(session)
 
                 # Update prayer time attributes
-                next_prayer_name, next_prayer_time = self._prayer_times.get_next_prayer()
+                current_prayer, next_prayer, next_prayer_time = self._prayer_times.get_current_and_next_prayer()
                 prayer_times = self._prayer_times.get_prayer_times_utc()
-                
+
                 self._attr_extra_state_attributes.update({
-                    "next": next_prayer_name or "Unknown",
-                    #"next_time": next_prayer_time or "Unknown",
-                    **prayer_times
+                    "current": current_prayer or "Unknown",
+                    "next": next_prayer or "Unknown",
+                    **prayer_times,
                 })
 
-                # Fetch Hijri date
-                hijri_date = await self._fetch_hijri_date(session)
+                # Extract Hijri date from today's prayer times
+                today_date = dt.now(TIMEZONE).strftime("%d-%b-%Y")
+                today_prayer_times = self._prayer_times._daily_prayer_times.get(today_date, {})
+                hijri_date = today_prayer_times.get("hijri")
+
                 if hijri_date:
-                    try:
-                        hijri_year, hijri_month, hijri_day = hijri_date.split("-")
-                        month_name = HIJRI_MONTHS.get(hijri_month, "Unknown")
-                        hijri_full = f"{int(hijri_day):02d} {month_name} {hijri_year}"
-                        
-                        self._attr_extra_state_attributes["hijri_date"] = hijri_date
-                        self._attr_extra_state_attributes["hijri_full"] = hijri_full
-                    except ValueError:
-                        _LOGGER.error("Failed to parse Hijri date format")
+                    hijri_year, hijri_month, hijri_day = hijri_date.split("-")
+                    month_name = HIJRI_MONTHS.get(hijri_month, "Unknown")
+                    hijri_full = f"{int(hijri_day):02d} {month_name} {hijri_year}"
+
+                    self._attr_extra_state_attributes["hijri_date"] = hijri_date
+                    self._attr_extra_state_attributes["hijri_full"] = hijri_full
 
                 # Fetch Islamic calendar events
                 async with session.get(ISLAMIC_EVENTS_API) as response:
@@ -148,19 +125,15 @@ class EsolatCalendar(CalendarEntity):
                         return
 
                     events = []
-                    current_year = dt.now(TIMEZONE).year
-                    
                     for event in data.get("event", []):
                         try:
                             date_str = f"{event['tarikh_miladi']} 00:00:00"
                             naive_dt = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
-                            
-                            if naive_dt.year != current_year:
-                                continue
-                            
+
+                            # Include events for current and next year
                             start = naive_dt.replace(tzinfo=TIMEZONE)
                             end = start.replace(hour=23, minute=59, second=59)
-                            
+
                             events.append(
                                 CalendarEvent(
                                     summary=event["hari_peristiwa"].strip(),

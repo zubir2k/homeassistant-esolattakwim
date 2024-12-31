@@ -1,0 +1,16 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "data": {
+                    "zone": "Zon"
+                },
+                "description": "Pilih zon anda untuk paparan waktu solat.",
+                "title": "eSolat Takwim Malaysia"
+            }
+        },
+        "abort": {
+            "single_instance_allowed": "Hanya satu entiti dibenarkan."
+        }
+    }
+}

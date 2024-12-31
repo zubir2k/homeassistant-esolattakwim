@@ -64,99 +64,159 @@ class PrayerTimesData:
                 
         return utc_prayer_times
 
+    def get_current_and_next_prayer(self) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+        """Get the current and next prayer name and time."""
+        prayer_times = self.get_todays_prayer_times()
+        if not prayer_times:
+            return None, None, None
+
+        now = dt.now(TIMEZONE)
+        current_time = now.time()
+
+        current_prayer = None
+        next_prayer = None
+        next_prayer_time = None
+
+        # Sort prayer times by their time, excluding non-time fields like 'hijri'
+        sorted_prayers = sorted(
+            [(k, v) for k, v in prayer_times.items() if ":" in v],
+            key=lambda x: datetime.strptime(x[1], "%H:%M"),
+        )
+
+        for i, (prayer, time_str) in enumerate(sorted_prayers):
+            prayer_time = datetime.strptime(time_str, "%H:%M").time()
+
+            if prayer_time > current_time:
+                # The next prayer is the first prayer time that is later than the current time
+                next_prayer = PRAYER_NAMES.get(prayer, prayer)
+                next_prayer_time = time_str
+                # The current prayer is the one just before the next prayer
+                if i > 0:
+                    current_prayer = PRAYER_NAMES.get(sorted_prayers[i - 1][0], sorted_prayers[i - 1][0])
+                break
+
+        # If no next prayer is found, the current prayer is the last prayer of the day
+        if not next_prayer and sorted_prayers:
+            current_prayer = PRAYER_NAMES.get(sorted_prayers[-1][0], sorted_prayers[-1][0])
+
+        # Handle case when the current time is before the first prayer
+        if not current_prayer:
+            previous_day = (now - timedelta(days=1)).strftime("%d-%b-%Y")
+            previous_prayer_times = self._daily_prayer_times.get(previous_day, {})
+            if previous_prayer_times:
+                sorted_previous_prayers = sorted(
+                    [(k, v) for k, v in previous_prayer_times.items() if ":" in v],
+                    key=lambda x: datetime.strptime(x[1], "%H:%M"),
+                )
+                if sorted_previous_prayers:
+                    current_prayer = PRAYER_NAMES.get(sorted_previous_prayers[-1][0], sorted_previous_prayers[-1][0])
+
+        return current_prayer, next_prayer, next_prayer_time
+
     async def fetch_prayer_times(self, session: aiohttp.ClientSession) -> bool:
-        """Fetch prayer times for the current year, and next year if needed."""
+        """Fetch prayer times for the current year and store Hijri dates."""
         current_year = dt.now(TIMEZONE).year
         current_month = dt.now(TIMEZONE).month
 
-        # Only update if we haven't fetched this year's data yet
-        if self._last_update_year == current_year:
-            return True
+        # Clear existing prayer times to avoid duplicates
+        self._prayer_times.clear()
 
-        try:
+        # Purge older data
+        self._purge_old_prayer_times(current_year)
+
+        # Helper to fetch yearly data
+        async def _fetch_yearly_prayer_times(year: int):
             url = PRAYER_TIMES_API.format(zone=self._zone)
+            start_date = datetime(year, 1, 1)
+            end_date = datetime(year, 12, 31)
 
-            async def fetch_yearly_prayer_times(year: int):
-                """Helper function to fetch prayer times for a specific year."""
-                start_date = datetime(year, 1, 1)
-                end_date = datetime(year, 12, 31)
+            form_data = FormData()
+            form_data.add_field('datestart', start_date.strftime('%Y-%m-%d'))
+            form_data.add_field('dateend', end_date.strftime('%Y-%m-%d'))
 
-                form_data = FormData()
-                form_data.add_field('datestart', start_date.strftime('%Y-%m-%d'))
-                form_data.add_field('dateend', end_date.strftime('%Y-%m-%d'))
+            async with session.post(url, data=form_data) as response:
+                if response.status != 200:
+                    _LOGGER.error("Failed to fetch prayer times for year %d", year)
+                    return False
 
-                async with session.post(url, data=form_data) as response:
-                    if response.status != 200:
-                        _LOGGER.error("Failed to get prayer times for year %d from eSolat API", year)
-                        return False
+                data = await response.json()
+                if data.get("status") != "OK!":
+                    _LOGGER.error("Invalid response from eSolat Prayer Times API for year %d", year)
+                    return False
 
-                    data = await response.json()
-                    if data.get("status") != "OK!":
-                        _LOGGER.error("Invalid response from eSolat Prayer Times API for year %d", year)
-                        return False
+                for prayer_time in data.get("prayerTime", []):
+                    try:
+                        # Extract Hijri date and Gregorian date
+                        date_str = prayer_time["date"]
+                        hijri_date = prayer_time["hijri"]
 
-                    for prayer_time in data.get("prayerTime", []):
-                        try:
-                            date_str = prayer_time["date"]
-                            date = datetime.strptime(date_str, "%d-%b-%Y").replace(tzinfo=TIMEZONE)
+                        # Store daily prayer times with Hijri date
+                        self._daily_prayer_times[date_str] = {
+                            "hijri": hijri_date,
+                            **{prayer: prayer_time[prayer] for prayer in PRAYER_NAMES if prayer in prayer_time},
+                        }
 
-                            # Store daily prayer times
-                            prayer_dict = {}
-                            for prayer in PRAYER_NAMES:
-                                if prayer in prayer_time:
-                                    prayer_dict[prayer] = prayer_time[prayer]
-                            self._daily_prayer_times[date_str] = prayer_dict
+                        # Store calendar events as before
+                        for prayer, display_name in PRAYER_NAMES.items():
+                            if prayer in prayer_time:
+                                time_str = prayer_time[prayer]
+                                time_parts = time_str.split(":")
+                                if len(time_parts) >= 2:
+                                    hour = int(time_parts[0])
+                                    minute = int(time_parts[1])
+                                    date = datetime.strptime(date_str, "%d-%b-%Y").replace(tzinfo=TIMEZONE)
+                                    start = date.replace(hour=hour, minute=minute)
+                                    end_minute = (minute + 15) % 60
+                                    end_hour = hour + ((minute + 15) // 60)
+                                    end = date.replace(hour=end_hour, minute=end_minute)
 
-                            # Create calendar events for each prayer time
-                            for prayer, display_name in PRAYER_NAMES.items():
-                                if prayer in prayer_time:
-                                    try:
-                                        time_str = prayer_time[prayer]
-                                        time_parts = time_str.split(":")
-                                        if len(time_parts) >= 2:
-                                            hour = int(time_parts[0])
-                                            minute = int(time_parts[1])
+                                    event = CalendarEvent(
+                                        summary=f"{display_name}",
+                                        start=start,
+                                        end=end,
+                                    )
 
-                                            if 0 <= hour <= 23 and 0 <= minute <= 59:
-                                                start = date.replace(hour=hour, minute=minute)
-                                                end_minute = (minute + 15) % 60
-                                                end_hour = hour + ((minute + 15) // 60)
-                                                if end_hour > 23:
-                                                    end_hour = 23
-                                                    end_minute = 59
+                                    if prayer not in self._prayer_times:
+                                        self._prayer_times[prayer] = []
+                                    self._prayer_times[prayer].append(event)
 
-                                                end = date.replace(hour=end_hour, minute=end_minute)
-
-                                                event = CalendarEvent(
-                                                    summary=f"{display_name}",
-                                                    start=start,
-                                                    end=end,
-                                                )
-
-                                                if prayer not in self._prayer_times:
-                                                    self._prayer_times[prayer] = []
-                                                self._prayer_times[prayer].append(event)
-                                    except (ValueError, IndexError) as err:
-                                        _LOGGER.error("Error parsing time %s: %s", time_str, err)
-                                        continue
-                        except (KeyError, ValueError) as err:
-                            _LOGGER.error("Error parsing prayer time: %s", err)
-                            continue
-                    return True
-
-            # Fetch data for the current year
-            await fetch_yearly_prayer_times(current_year)
-
-            # If it's December, fetch data for the next year
-            if current_month == 12:
-                await fetch_yearly_prayer_times(current_year + 1)
-
-            self._last_update_year = current_year
+                    except (KeyError, ValueError) as err:
+                        _LOGGER.error("Error parsing prayer time: %s", err)
+                        continue
             return True
 
-        except (aiohttp.ClientError, Exception) as err:
-            _LOGGER.error("Error fetching prayer times: %s", err)
-            return False
+        # Fetch prayer times for the current year
+        await _fetch_yearly_prayer_times(current_year)
+
+        # Fetch next year's prayer times in December
+        if current_month == 12:
+            await _fetch_yearly_prayer_times(current_year + 1)
+
+        self._last_update_year = current_year
+        return True
+
+    def _purge_old_prayer_times(self, current_year: int) -> None:
+        """Purge prayer times for years before the current year, but retain the last day of the previous year."""
+        last_day_previous_year = datetime(current_year - 1, 12, 31).strftime("%d-%b-%Y")
+
+        keys_to_delete = [
+            date_str for date_str in self._daily_prayer_times.keys()
+            if datetime.strptime(date_str, "%d-%b-%Y").year < current_year - 1 or
+            (datetime.strptime(date_str, "%d-%b-%Y").year == current_year - 1 and date_str != last_day_previous_year)
+        ]
+
+        for key in keys_to_delete:
+            del self._daily_prayer_times[key]
+
+        # Purge events but retain the last day of the previous year
+        for prayer in list(self._prayer_times.keys()):
+            self._prayer_times[prayer] = [
+                event for event in self._prayer_times[prayer]
+                if event.start.year >= current_year or
+                (event.start.year == current_year - 1 and event.start.strftime("%d-%b-%Y") == last_day_previous_year)
+            ]
+            if not self._prayer_times[prayer]:
+                del self._prayer_times[prayer]
 
     def get_events(self, start_date: datetime, end_date: datetime) -> list[CalendarEvent]:
         """Get prayer time events within the specified date range."""

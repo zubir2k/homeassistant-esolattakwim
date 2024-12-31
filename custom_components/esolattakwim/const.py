@@ -8,7 +8,6 @@ TIMEZONE = ZoneInfo("Asia/Kuala_Lumpur")
 
 # API endpoints
 ISLAMIC_EVENTS_API = "https://www.e-solat.gov.my/index.php?r=esolatApi/islamicevent&type=all"
-HIJRI_API = "https://www.e-solat.gov.my/index.php?r=esolatApi/tarikhtakwim&period=today&datetype=miladi"
 PRAYER_TIMES_API = "https://www.e-solat.gov.my/index.php?r=esolatApi/takwimsolat&period=duration&zone={zone}"
 
 # Prayer names mapping
