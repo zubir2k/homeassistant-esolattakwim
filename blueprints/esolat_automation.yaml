@@ -28,7 +28,7 @@ blueprint:
       name: Azan
       description: URL of your preferred azan audio file.
       selector:
-        text: http://dl.sndup.net/22ptk/azan_alexa.mp3
+        text: https://dl.sndup.net/22ptk/azan_alexa.mp3
     audio_azansubuh:
       name: Azan Subuh
       description: URL of your preferred azan audio file.
