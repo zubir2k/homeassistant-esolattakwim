@@ -55,9 +55,10 @@ You may refer to the [Markdown.md](MARKDOWN.md) and copy the markdown codes.
 
 ![image](https://github.com/user-attachments/assets/73dd0218-0adb-4ac6-92d3-2226a2072d51)
 
-## Automation Azan
-Work-in-progress 🚧 \
-InshaAllah, I will share it here after finish running some tests. 
+## Automation Azan Blueprint
+I have prepared the automation in Blueprint format. Suggestions are welcome. 
+
+[![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fzubir2k%2Fhomeassistant-esolattakwim%2Fblob%2Fmain%2Fblueprints%2Fesolat_automation.yaml)
 
 ## Disclaimer/Credits
 Data provided by JAKIM (Department of Islamic Development Malaysia)
