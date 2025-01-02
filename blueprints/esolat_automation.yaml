@@ -1,0 +1,89 @@
+blueprint:
+  name: eSolat Automation Blueprint
+  description: Blueprint for eSolat prayer time notifications and reminders.
+  domain: automation
+  input:
+    calendar_entity:
+      name: eSolat Calendar Entity
+      description: Entity ID of the eSolat calendar.
+      selector:
+        entity:
+          domain: calendar
+    prayer_list:
+      name: Prayer Time List
+      description: Prayer times to notify for.
+      default: ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
+      selector:
+        object:
+          default:
+            - "Fajr"
+            - "Dhuhr"
+            - "Asr"
+            - "Maghrib"
+            - "Isha"
+
+defaults:
+  prayer_map:
+    Imsak: "Imsak"
+    Fajr: "Subuh"
+    Syuruk: "Syuruk"
+    Dhuhr: "Zohor"
+    Asr: "Asar"
+    Maghrib: "Maghrib"
+    Isha: "Isyak"
+
+trigger:
+  - platform: template
+    id: esolat_prayer
+    value_template: >-
+      {{ now().strftime('%H:%M') ==
+      as_timestamp(state_attr(blueprint.input.calendar_entity, (state_attr(blueprint.input.calendar_entity,'current') | lower))) | timestamp_custom('%H:%M') }}
+
+  - platform: template
+    id: esolat_reminder
+    value_template: >-
+      {{ (as_local(now()).strftime("%s") | int + (15*60)) |
+      timestamp_custom("%H:%M", false) ==
+      as_timestamp(state_attr(blueprint.input.calendar_entity, (state_attr(blueprint.input.calendar_entity,'next') | lower))) | timestamp_custom('%H:%M') }}
+
+condition: []
+
+action:
+  - variables:
+      prayer: >-
+        {% set prayer_map = defaults.prayer_map %}{% set prayer_name = state_attr(blueprint.input.calendar_entity,'current') %}{% if prayer_name in prayer_map %}{{ prayer_map[prayer_name] }}{% else %}Unknown{% endif %}
+      prayer_next: >-
+        {% set prayer_map = defaults.prayer_map %}{% set prayer_name = state_attr(blueprint.input.calendar_entity,'next') %}{% if prayer_name in prayer_map %}{{ prayer_map[prayer_name] }}{% else %}Unknown{% endif %}
+
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: esolat_prayer
+          - condition: template
+            value_template: >-
+              {{ state_attr(blueprint.input.calendar_entity,'current') in blueprint.input.prayer_list }}
+        sequence:
+          - service: persistent_notification.create
+            data:
+              notification_id: esolat_notify
+              title: >-
+                🕋 eSolat - Waktu {{ prayer }}
+              message: >-
+                {{ now().strftime('%-I:%M %p') }} - Sekarang telah masuk waktu {{ prayer }} bagi kawasan ini dan kawasan yang sama waktu dengannya.
+
+      - conditions:
+          - condition: trigger
+            id: esolat_reminder
+          - condition: template
+            value_template: >-
+              {{ state_attr(blueprint.input.calendar_entity,'current') in blueprint.input.prayer_list }}
+        sequence:
+          - service: persistent_notification.create
+            data:
+              notification_id: esolat_remind
+              title: >-
+                🕋 eSolat - Waktu {{ prayer_next }} Reminder ⏰
+              message: >-
+                {{ now().strftime('%-I:%M %p') }} - Azan {{ prayer_next }} akan berkumandang sebentar nanti.
+
+mode: single
