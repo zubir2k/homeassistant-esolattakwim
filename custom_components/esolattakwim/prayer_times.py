@@ -77,27 +77,50 @@ class PrayerTimesData:
         next_prayer = None
         next_prayer_time = None
 
-        # Sort prayer times by their time, excluding non-time fields like 'hijri'
+        def normalize_time(time_str: str) -> str:
+            """Ensure time is in %H:%M:%S format by adding seconds if missing."""
+            if len(time_str.split(":")) == 2:  # If only HH:MM is provided
+                return f"{time_str}:00"
+            return time_str
+
+        # Normalize all prayer times to include seconds
+        normalized_prayers = {
+            prayer: normalize_time(time_str) for prayer, time_str in prayer_times.items()
+        }
+
+        # Sort today's prayer times
         sorted_prayers = sorted(
-            [(k, v) for k, v in prayer_times.items() if ":" in v],
-            key=lambda x: datetime.strptime(x[1], "%H:%M"),
+            [(k, v) for k, v in normalized_prayers.items() if ":" in v],
+            key=lambda x: datetime.strptime(x[1], "%H:%M:%S"),
         )
 
         for i, (prayer, time_str) in enumerate(sorted_prayers):
-            prayer_time = datetime.strptime(time_str, "%H:%M").time()
+            prayer_time = datetime.strptime(time_str, "%H:%M:%S").time()
 
             if prayer_time > current_time:
-                # The next prayer is the first prayer time that is later than the current time
+                # Set next prayer and its time
                 next_prayer = PRAYER_NAMES.get(prayer, prayer)
                 next_prayer_time = time_str
-                # The current prayer is the one just before the next prayer
+                # Set current prayer to the one just before the next prayer
                 if i > 0:
                     current_prayer = PRAYER_NAMES.get(sorted_prayers[i - 1][0], sorted_prayers[i - 1][0])
                 break
 
-        # If no next prayer is found, the current prayer is the last prayer of the day
+        # Handle case when no next prayer is found (after Isyak)
         if not next_prayer and sorted_prayers:
             current_prayer = PRAYER_NAMES.get(sorted_prayers[-1][0], sorted_prayers[-1][0])
+
+            # Look ahead to the first prayer of the next day
+            next_day = (now + timedelta(days=1)).strftime("%d-%b-%Y")
+            next_day_prayer_times = self._daily_prayer_times.get(next_day, {})
+            if next_day_prayer_times:
+                sorted_next_day_prayers = sorted(
+                    [(k, v) for k, v in next_day_prayer_times.items() if ":" in v],
+                    key=lambda x: datetime.strptime(normalize_time(x[1]), "%H:%M:%S"),
+                )
+                if sorted_next_day_prayers:
+                    next_prayer = PRAYER_NAMES.get(sorted_next_day_prayers[0][0], sorted_next_day_prayers[0][0])
+                    next_prayer_time = normalize_time(sorted_next_day_prayers[0][1])
 
         # Handle case when the current time is before the first prayer
         if not current_prayer:
@@ -106,12 +129,13 @@ class PrayerTimesData:
             if previous_prayer_times:
                 sorted_previous_prayers = sorted(
                     [(k, v) for k, v in previous_prayer_times.items() if ":" in v],
-                    key=lambda x: datetime.strptime(x[1], "%H:%M"),
+                    key=lambda x: datetime.strptime(normalize_time(x[1]), "%H:%M:%S"),
                 )
                 if sorted_previous_prayers:
                     current_prayer = PRAYER_NAMES.get(sorted_previous_prayers[-1][0], sorted_previous_prayers[-1][0])
 
         return current_prayer, next_prayer, next_prayer_time
+
 
     async def fetch_prayer_times(self, session: aiohttp.ClientSession) -> bool:
         """Fetch prayer times for the current year and store Hijri dates."""
