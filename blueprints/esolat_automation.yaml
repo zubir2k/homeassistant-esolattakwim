@@ -28,12 +28,14 @@ blueprint:
       name: Azan
       description: URL of your preferred azan audio file.
       selector:
-        text: https://dl.sndup.net/22ptk/azan_alexa.mp3
+        text: 
+      default: "https://dl.sndup.net/22ptk/azan_alexa.mp3"
     audio_azansubuh:
       name: Azan Subuh
       description: URL of your preferred azan audio file.
       selector:
-        text: https://dl.sndup.net/rkrk/azansubuh_alexa.mp3
+        text: 
+      default: "https://dl.sndup.net/rkrk/azansubuh_alexa.mp3"
     notification_options:
       name: Notification Options
       description: Select notification types to use.
