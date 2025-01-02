@@ -1,6 +1,6 @@
 blueprint:
   name: eSolat Automation Blueprint
-  description: Blueprint for eSolat prayer time notifications and reminders.
+  description: Blueprint for eSolat prayer time notifications with speaker alerts.
   domain: automation
   input:
     calendar_entity:
@@ -9,28 +9,25 @@ blueprint:
       selector:
         entity:
           domain: calendar
-    prayer_list:
-      name: Prayer Time List
-      description: Prayer times to notify for.
-      default: ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
+    speaker_type:
+      name: Speaker Type
+      description: Type of speaker to use for the alert (Google or Alexa).
       selector:
-        object:
-          default:
-            - "Fajr"
-            - "Dhuhr"
-            - "Asr"
-            - "Maghrib"
-            - "Isha"
-
-defaults:
-  prayer_map:
-    Imsak: "Imsak"
-    Fajr: "Subuh"
-    Syuruk: "Syuruk"
-    Dhuhr: "Zohor"
-    Asr: "Asar"
-    Maghrib: "Maghrib"
-    Isha: "Isyak"
+        select:
+          options:
+            - Google
+            - Alexa
+    speaker_entity:
+      name: Speaker Entity
+      description: The media player entity for the speaker.
+      selector:
+        entity:
+          domain: media_player
+    audio_url:
+      name: Audio URL
+      description: URL of the audio file to play for the alert.
+      selector:
+        text:
 
 trigger:
   - platform: template
@@ -51,17 +48,20 @@ condition: []
 action:
   - variables:
       prayer: >-
-        {% set prayer_map = defaults.prayer_map %}{% set prayer_name = state_attr(blueprint.input.calendar_entity,'current') %}{% if prayer_name in prayer_map %}{{ prayer_map[prayer_name] }}{% else %}Unknown{% endif %}
+        {% set prayer_map = {'Imsak':'Imsak', 'Fajr':'Subuh', 'Syuruk':'Syuruk',
+        'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{%
+        set prayer_name = state_attr(blueprint.input.calendar_entity,'current') %}
+        {{ prayer_map.get(prayer_name, 'Unknown') }}
       prayer_next: >-
-        {% set prayer_map = defaults.prayer_map %}{% set prayer_name = state_attr(blueprint.input.calendar_entity,'next') %}{% if prayer_name in prayer_map %}{{ prayer_map[prayer_name] }}{% else %}Unknown{% endif %}
+        {% set prayer_map = {'Imsak':'Imsak', 'Fajr':'Subuh', 'Syuruk':'Syuruk',
+        'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{%
+        set prayer_name = state_attr(blueprint.input.calendar_entity,'next') %}
+        {{ prayer_map.get(prayer_name, 'Unknown') }}
 
   - choose:
       - conditions:
           - condition: trigger
             id: esolat_prayer
-          - condition: template
-            value_template: >-
-              {{ state_attr(blueprint.input.calendar_entity,'current') in blueprint.input.prayer_list }}
         sequence:
           - service: persistent_notification.create
             data:
@@ -70,20 +70,21 @@ action:
                 🕋 eSolat - Waktu {{ prayer }}
               message: >-
                 {{ now().strftime('%-I:%M %p') }} - Sekarang telah masuk waktu {{ prayer }} bagi kawasan ini dan kawasan yang sama waktu dengannya.
+          - service: media_player.play_media
+            data:
+              entity_id: !input speaker_entity
+              media_content_id: !input audio_url
+              media_content_type: music
 
       - conditions:
           - condition: trigger
             id: esolat_reminder
-          - condition: template
-            value_template: >-
-              {{ state_attr(blueprint.input.calendar_entity,'current') in blueprint.input.prayer_list }}
         sequence:
           - service: persistent_notification.create
             data:
               notification_id: esolat_remind
               title: >-
-                🕋 eSolat - Waktu {{ prayer_next }} Reminder ⏰
+                🕋 eSolat - Waktu {{ prayer_next }} ⏰
               message: >-
                 {{ now().strftime('%-I:%M %p') }} - Azan {{ prayer_next }} akan berkumandang sebentar nanti.
-
 mode: single
