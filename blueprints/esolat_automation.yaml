@@ -78,11 +78,11 @@ action:
       prayer: >-
         {% set prayer_map = {'Imsak':'Imsak', 'Fajr':'Subuh', 'Syuruk':'Syuruk',
         'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{{
-        prayer_map[state_attr(esolattakwim,'current')] }}        
+        prayer_map[states[esolattakwim].attributes.current] }}        
       prayer_next: >-
         {% set prayer_map = {'Imsak':'Imsak', 'Fajr':'Subuh', 'Syuruk':'Syuruk',
         'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{{
-        prayer_map[state_attr(esolattakwim,'next')] }}
+        prayer_map[states[esolattakwim].attributes.next] }}
   - choose:
       - conditions:
           - condition: trigger
