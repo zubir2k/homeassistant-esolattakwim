@@ -1,6 +1,6 @@
 blueprint:
   name: 🕋 eSolat Automation Blueprint
-  description: v1.0 beta3b - Blueprint for eSolat prayer time notifications with speaker alerts.
+  description: v1.0 beta3e - Blueprint for eSolat prayer time notifications with speaker alerts.
   author: Zubir Jamal
   domain: automation
   input:
