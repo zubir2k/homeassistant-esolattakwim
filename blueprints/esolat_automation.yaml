@@ -123,18 +123,18 @@ action:
             id: esolat_prayer
         sequence:
           parallel:
-						- conditions:
-								- condition: template
-									value_template: >-
-										{{ 'Persistent Notification' in notification_options }}
-							sequence:
-								- action: persistent_notification.create
-									data:
-										notification_id: esolat_notify
-										title: >-
-											🕋 eSolat - Waktu {{ prayer }}
-										message: >-
-											{{ now().strftime('%-I:%M %p') }} - Sekarang telah masuk waktu {{ prayer }} bagi kawasan ini dan kawasan yang sama waktu dengannya.
+            - conditions:
+	            - condition: template
+								value_template: >-
+							  	{{ 'Persistent Notification' in notification_options }}
+							  sequence:
+								  - action: persistent_notification.create
+									  data:
+										  notification_id: esolat_notify
+										  title: >-
+											  🕋 eSolat - Waktu {{ prayer }}
+										  message: >-
+											  {{ now().strftime('%-I:%M %p') }} - Sekarang telah masuk waktu {{ prayer }} bagi kawasan ini dan kawasan yang sama waktu dengannya.
 						- conditions:
 								- condition: template
 									value_template: >-
