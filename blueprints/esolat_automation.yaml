@@ -97,7 +97,6 @@ action:
         prayer_map[state_attr(esolattakwim,'next')] }}
   - action: persistent_notification.create
     data: 
-      notification_id: esolat_debug
       title: >-
         🕋 [DEBUG] eSolat - Variables Check ✅
       message: >-
