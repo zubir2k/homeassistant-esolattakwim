@@ -1,15 +1,16 @@
 blueprint:
   name: 🕋 eSolat Automation Blueprint
-  description: Blueprint for eSolat prayer time notifications with speaker alerts.
+  description: v1.0 beta2 - Blueprint for eSolat prayer time notifications with speaker alerts.
   author: Zubir Jamal
   domain: automation
   input:
-    calendar_entity:
+    esolattakwim:
       name: eSolat Calendar Entity
       description: Please ensure the eSolat Takwim has been configured.
       selector:
         entity:
           domain: calendar
+          integration: esolattakwim
     speaker_type:
       name: Speaker Type
       description: Type of speaker to use for the alert (Google or Alexa).
@@ -24,12 +25,21 @@ blueprint:
       selector:
         entity:
           domain: media_player
+    reminder:
+      name: Azan Reminder
+      description: Minute reminder before prayer time
+      default: 15
+      selector:
+        number:
+          min: 5
+          max: 30
+          mode: slider
     audio_azan:
       name: Azan
       description: URL of your preferred azan audio file.
       selector:
         text: 
-      default: "https://dl.sndup.net/22ptk/azan_alexa.mp3"
+      default: "https://dl.sndup.net/c7sgg/azan_alexa.mp3"
     audio_azansubuh:
       name: Azan Subuh
       description: URL of your preferred azan audio file.
@@ -46,20 +56,29 @@ blueprint:
             - Persistent Notification
             - Mobile Notification
             - Audio Notification
+    esolatdebug:
+      name: Debug Entity
+      description: Debug value will be shown in Persistent notification
+      selector:
+        select:
+          multiple: true
+          options:
+            - Enable
 
 trigger:
   - platform: template
     id: esolat_prayer
     value_template: >-
+      {{ states[esolattakwim] }}
       {{ now().strftime('%H:%M') ==
-      as_timestamp(state_attr(blueprint.input.calendar_entity, (state_attr(blueprint.input.calendar_entity,'current') | lower))) | timestamp_custom('%H:%M') }}
+      as_timestamp(state_attr(esolattakwim, (state_attr(esolattakwim,'current') | lower))) | timestamp_custom('%H:%M') }}
 
   - platform: template
     id: esolat_reminder
     value_template: >-
-      {{ (as_local(now()).strftime("%s") | int + (15*60)) |
+      {{ (as_local(now()).strftime("%s") | int + (reminder*60)) |
       timestamp_custom("%H:%M", false) ==
-      as_timestamp(state_attr(blueprint.input.calendar_entity, (state_attr(blueprint.input.calendar_entity,'next') | lower))) | timestamp_custom('%H:%M') }}
+      as_timestamp(state_attr(esolattakwim, (state_attr(esolattakwim,'next') | lower))) | timestamp_custom('%H:%M') }}
 
 condition: []
 
@@ -67,25 +86,22 @@ action:
   - variables:
       prayer: >-
         {% set prayer_map = {'Imsak':'Imsak', 'Fajr':'Subuh', 'Syuruk':'Syuruk',
-        'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{%
-        set prayer_name = state_attr(blueprint.input.calendar_entity,'current') %}
-        {{ prayer_map.get(prayer_name, 'Unknown') }}
+        'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{{
+        prayer_map[state_attr(esolattakwim,'current')] }}        
       prayer_next: >-
         {% set prayer_map = {'Imsak':'Imsak', 'Fajr':'Subuh', 'Syuruk':'Syuruk',
-        'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{%
-        set prayer_name = state_attr(blueprint.input.calendar_entity,'next') %}
-        {{ prayer_map.get(prayer_name, 'Unknown') }}
-
+        'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{{
+        prayer_map[state_attr(esolattakwim,'next')] }}
   - choose:
       - conditions:
           - condition: trigger
             id: esolat_prayer
-        sequence:
+        parallel:
           - choose:
               - conditions:
                   - condition: template
                     value_template: >-
-                      {{ 'Persistent Notification' in blueprint.input.notification_options }}
+                      {{ 'Persistent Notification' in notification_options }}
                 sequence:
                   - service: persistent_notification.create
                     data:
@@ -97,7 +113,7 @@ action:
               - conditions:
                   - condition: template
                     value_template: >-
-                      {{ 'Mobile Notification' in blueprint.input.notification_options }}
+                      {{ 'Mobile Notification' in notification_options }}
                 sequence:
                   - service: notify.notify
                     data:
@@ -108,42 +124,51 @@ action:
               - conditions:
                   - condition: template
                     value_template: >-
-                      {{ 'Audio Notification' in blueprint.input.notification_options }}
+                      {{ 'Audio Notification' in notification_options }}
                 sequence:
                   - choose:
                       - conditions:
                           - condition: template
-                            value_template: "{{ blueprint.input.speaker_type == 'Google' }}"
+                            value_template: "{{ speaker_type == 'Google' }}"
                         sequence:
                           - service: media_player.play_media
                             target:
                               entity_id: !input speaker_entity
                             data:
                               media_content_type: audio/mp3
-                              media_content_id: !input audio_azan
+                              media_content_id: >-
+                                {% if prayer == "Subuh" 
+                                %}{{ audio_azansubuh }}{% else 
+                                %}{{ audio_azan }}{% endif %}
                               extra:
                                 title: Azan {{ prayer }}
                                 thumb: https://i.imgur.com/1U9Ehvr.png                              
                       - conditions:
                           - condition: template
-                            value_template: "{{ blueprint.input.speaker_type == 'Alexa' }}"
+                            value_template: "{{ speaker_type == 'Alexa' }}"
                         sequence:
                           - service: notify.alexa_media
+                            continue_on_error: true
                             data:
-                              target: !input speaker_entity
-                              message: "It is now {{ prayer }}"
                               data:
-                                type: announce
+                                type: tts
+                              target: >-
+                                {% set speaker = speaker_entity %}
+                                {{ speaker | replace("media_player.","notify.alexa_media_") }}
+                              message: >-
+                                <audio src='{% if prayer == "Subuh" 
+                                %}https://dl.sndup.net/rkrk/azansubuh_alexa.mp3{% else
+                                %}https://dl.sndup.net/c7sgg/azan_alexa.mp3{% endif %}'/>
 
       - conditions:
           - condition: trigger
             id: esolat_reminder
-        sequence:
+        parallel:
           - choose:
               - conditions:
                   - condition: template
                     value_template: >-
-                      {{ 'Persistent Notification' in blueprint.input.notification_options }}
+                      {{ 'Persistent Notification' in notification_options }}
                 sequence:
                   - service: persistent_notification.create
                     data:
@@ -155,13 +180,13 @@ action:
               - conditions:
                   - condition: template
                     value_template: >-
-                      {{ 'Mobile Notification' in blueprint.input.notification_options }}
+                      {{ 'Mobile Notification' in notification_options }}
                 sequence:
                   - service: notify.notify
                     data:
                       title: >-
                         🕋 eSolat - Waktu {{ prayer_next }} ⏰
                       message: >-
-                        {{ now().strftime('%-I:%M %p') }} - Azan {{ prayer_next }} akan berkumandang sebentar nanti.
+                        {{ as_timestamp(state_attr(esolattakwim, (state_attr(esolattakwim,'next') | lower))) | timestamp_custom('%-I:%M %p') }} - Azan {{ prayer_next }} akan berkumandang sebentar nanti.
 
 mode: single
