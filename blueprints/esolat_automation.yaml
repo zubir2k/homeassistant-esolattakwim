@@ -96,22 +96,23 @@ action:
         'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{{
         prayer_map[state_attr(esolattakwim,'next')] }}
   - action: persistent_notification.create
-    data: notification_id: esolat_debug
-    title: >-
-      🕋 [DEBUG] eSolat - Variables Check ✅
-    message: >-
-      prayer - {{ prayer }}{{ '\n' }}
-      prayer_next - {{ prayer_next }}{{ '\n' }}
-      prayer_next - {{ prayer_next }}{{ '\n' }}
-      esolattakwim - {{ esolattakwim }}{{ '\n' }}
-      current24h - {{ current24h }}{{ '\n' }}
-      next24h - {{ next24h }}{{ '\n' }}
-      speaker_type - {{ speaker_type }}{{ '\n' }}
-      speaker_entity - {{ speaker_entity }}{{ '\n' }}
-      reminder - {{ reminder }}{{ '\n' }}
-      audio_azan - {{ audio_azan }}{{ '\n' }}
-      audio_azansubuh - {{ audio_azansubuh }}{{ '\n' }}
-      notification_options - {{ notification_options }}
+    data: 
+      notification_id: esolat_debug
+      title: >-
+        🕋 [DEBUG] eSolat - Variables Check ✅
+      message: >-
+        prayer - {{ prayer }}{{ '\n' }}
+        prayer_next - {{ prayer_next }}{{ '\n' }}
+        prayer_next - {{ prayer_next }}{{ '\n' }}
+        esolattakwim - {{ esolattakwim }}{{ '\n' }}
+        current24h - {{ current24h }}{{ '\n' }}
+        next24h - {{ next24h }}{{ '\n' }}
+        speaker_type - {{ speaker_type }}{{ '\n' }}
+        speaker_entity - {{ speaker_entity }}{{ '\n' }}
+        reminder - {{ reminder }}{{ '\n' }}
+        audio_azan - {{ audio_azan }}{{ '\n' }}
+        audio_azansubuh - {{ audio_azansubuh }}{{ '\n' }}
+        notification_options - {{ notification_options }}
       
   - choose:
       - conditions:
