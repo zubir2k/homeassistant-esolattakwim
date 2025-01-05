@@ -1,12 +1,13 @@
 blueprint:
   name: 🕋 eSolat Automation Blueprint
-  description: v1.0 beta3a - Blueprint for eSolat prayer time notifications with speaker alerts.
+  description: v1.0 beta3b - Blueprint for eSolat prayer time notifications with speaker alerts.
   author: Zubir Jamal
   domain: automation
   input:
     esolattakwim:
       name: eSolat Calendar Entity
       description: Please ensure the eSolat Takwim has been configured.
+      default: calendar.esolat_takwim
       selector:
         entity:
           domain: calendar
@@ -14,6 +15,7 @@ blueprint:
     speaker_type:
       name: Speaker Type
       description: Type of speaker to use for the alert (Google or Alexa).
+      default: Google
       selector:
         select:
           options:
@@ -49,6 +51,7 @@ blueprint:
     notification_options:
       name: Notification Options
       description: Select notification types to use.
+      default: "Persistent Notification"
       selector:
         select:
           multiple: true
