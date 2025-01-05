@@ -1,6 +1,6 @@
 blueprint:
   name: 🕋 eSolat Automation Blueprint
-  description: v1.0 beta3 - Blueprint for eSolat prayer time notifications with speaker alerts.
+  description: v1.0 beta3a - Blueprint for eSolat prayer time notifications with speaker alerts.
   author: Zubir Jamal
   domain: automation
   input:
@@ -96,7 +96,8 @@ action:
         'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{{
         prayer_map[state_attr(esolattakwim,'next')] }}
   - action: persistent_notification.create
-    data: 
+    data:
+      notification_id: esolat_check
       title: >-
         🕋 [DEBUG] eSolat - Variables Check ✅
       message: >-
