@@ -60,16 +60,16 @@ trigger:
   - platform: template
     id: esolat_prayer
     value_template: >-
-      {{ states[esolattakwim] }}
+      {% set current = states[esolattakwim].attributes.current | lower %}
       {{ now().strftime('%H:%M') ==
-      as_timestamp(state_attr(esolattakwim, (state_attr(esolattakwim,'current') | lower))) | timestamp_custom('%H:%M') }}
+      as_timestamp(states[esolattakwim].attributes[current]) | timestamp_custom('%H:%M') }}
 
   - platform: template
     id: esolat_reminder
     value_template: >-
-      {{ (as_local(now()).strftime("%s") | int + (reminder*60)) |
+      {% set next = states[esolattakwim].attributes.next | lower %}{{ (as_local(now()).strftime("%s") | int + (reminder*60)) |
       timestamp_custom("%H:%M", false) ==
-      as_timestamp(state_attr(esolattakwim, (state_attr(esolattakwim,'next') | lower))) | timestamp_custom('%H:%M') }}
+      as_timestamp(states[esolattakwim].attributes[current]) | timestamp_custom('%H:%M') }}
 
 condition: []
 
