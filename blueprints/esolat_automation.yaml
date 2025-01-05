@@ -1,6 +1,6 @@
 blueprint:
   name: 🕋 eSolat Automation Blueprint
-  description: v1.0 beta3d - Blueprint for eSolat prayer time notifications with speaker alerts.
+  description: v1.0 beta3b - Blueprint for eSolat prayer time notifications with speaker alerts.
   author: Zubir Jamal
   domain: automation
   input:
@@ -123,94 +123,96 @@ action:
             id: esolat_prayer
         sequence:
           parallel:
-            - conditions:
-                - condition: template
-                  value_template: >-
-                    {{ 'Persistent Notification' in notification_options }}
-              sequence:
-                - action: persistent_notification.create
-                  data:
-                    notification_id: esolat_notify
-                    title: >-
-                      🕋 eSolat - Waktu {{ prayer }}
-                    message: >-
-                      {{ now().strftime('%-I:%M %p') }} - Sekarang telah masuk waktu {{ prayer }} bagi kawasan ini dan kawasan yang sama waktu dengannya.
-            - conditions:
-                - condition: template
-                  value_template: >-
-                    {{ 'Mobile Notification' in notification_options }}
-              sequence:
-                - action: notify.notify
-                  data:
-                    title: >-
-                      🕋 eSolat - Waktu {{ prayer }}
-                    message: >-
-                      {{ now().strftime('%-I:%M %p') }} - Sekarang telah masuk waktu {{ prayer }} bagi kawasan ini dan kawasan yang sama waktu dengannya.
-            - conditions:
-                - condition: template
-                  value_template: >-
-                    {{ 'Audio Notification' in notification_options }}
-              sequence:
-                - choose:
-                    - conditions:
-                        - condition: template
-                          value_template: "{{ speaker_type == 'Google' }}"
-                      sequence:
-                        - action: media_player.play_media
-                          target:
-                            entity_id: !input speaker_entity
-                          data:
-                            media_content_type: audio/mp3
-                            media_content_id: >-
-                              {% if prayer == "Subuh" 
-                              %}{{ audio_azansubuh }}{% else 
-                              %}{{ audio_azan }}{% endif %}
-                            extra:
-                              title: Azan {{ prayer }}
-                              thumb: https://i.imgur.com/1U9Ehvr.png                              
-                    - conditions:
-                        - condition: template
-                          value_template: "{{ speaker_type == 'Alexa' }}"
-                      sequence:
-                        - action: notify.alexa_media
-                          continue_on_error: true
-                          data:
-                            data:
-                              type: tts
-                            target: >-
-                              {% set speaker = speaker_entity %}
-                              {{ speaker | replace("media_player.","notify.alexa_media_") }}
-                            message: >-
-                              <audio src='{% if prayer == "Subuh" 
-                              %}https://dl.sndup.net/rkrk/azansubuh_alexa.mp3{% else
-                              %}https://dl.sndup.net/c7sgg/azan_alexa.mp3{% endif %}'/>
+            - choose:
+                - conditions:
+                    - condition: template
+                      value_template: >-
+                        {{ 'Persistent Notification' in notification_options }}
+                  sequence:
+                    - action: persistent_notification.create
+                      data:
+                        notification_id: esolat_notify
+                        title: >-
+                          🕋 eSolat - Waktu {{ prayer }}
+                        message: >-
+                          {{ now().strftime('%-I:%M %p') }} - Sekarang telah masuk waktu {{ prayer }} bagi kawasan ini dan kawasan yang sama waktu dengannya.
+                - conditions:
+                    - condition: template
+                      value_template: >-
+                        {{ 'Mobile Notification' in notification_options }}
+                  sequence:
+                    - action: notify.notify
+                      data:
+                        title: >-
+                          🕋 eSolat - Waktu {{ prayer }}
+                        message: >-
+                          {{ now().strftime('%-I:%M %p') }} - Sekarang telah masuk waktu {{ prayer }} bagi kawasan ini dan kawasan yang sama waktu dengannya.
+                - conditions:
+                    - condition: template
+                      value_template: >-
+                        {{ 'Audio Notification' in notification_options }}
+                  sequence:
+                    - choose:
+                        - conditions:
+                            - condition: template
+                              value_template: "{{ speaker_type == 'Google' }}"
+                          sequence:
+                            - action: media_player.play_media
+                              target:
+                                entity_id: !input speaker_entity
+                              data:
+                                media_content_type: audio/mp3
+                                media_content_id: >-
+                                  {% if prayer == "Subuh" 
+                                  %}{{ audio_azansubuh }}{% else 
+                                  %}{{ audio_azan }}{% endif %}
+                                extra:
+                                  title: Azan {{ prayer }}
+                                  thumb: https://i.imgur.com/1U9Ehvr.png                              
+                        - conditions:
+                            - condition: template
+                              value_template: "{{ speaker_type == 'Alexa' }}"
+                          sequence:
+                            - action: notify.alexa_media
+                              continue_on_error: true
+                              data:
+                                data:
+                                  type: tts
+                                target: >-
+                                  {% set speaker = speaker_entity %}
+                                  {{ speaker | replace("media_player.","notify.alexa_media_") }}
+                                message: >-
+                                  <audio src='{% if prayer == "Subuh" 
+                                  %}https://dl.sndup.net/rkrk/azansubuh_alexa.mp3{% else
+                                  %}https://dl.sndup.net/c7sgg/azan_alexa.mp3{% endif %}'/>
 
       - conditions:
           - condition: trigger
             id: esolat_reminder
         sequence:
           parallel:
-            - conditions:
-                - condition: template
-                  value_template: >-
-                    {{ 'Persistent Notification' in notification_options }}
-              sequence:
-                - action: persistent_notification.create
-                  data:
-                    notification_id: esolat_remind
-                    title: >-
-                      🕋 eSolat - Waktu {{ prayer_next }} ⏰
-                    message: >-
-                      {{ now().strftime('%-I:%M %p') }} - Azan {{ prayer_next }} akan berkumandang sebentar nanti.
-            - conditions:
-                - condition: template
-                  value_template: >-
-                    {{ 'Mobile Notification' in notification_options }}
-              sequence:
-                - action: notify.notify
-                  data:
-                    title: >-
-                      🕋 eSolat - Waktu {{ prayer_next }} ⏰
-                    message: >-
-                      {{ as_timestamp(state_attr(esolattakwim, (state_attr(esolattakwim,'next') | lower))) | timestamp_custom('%-I:%M %p') }} - Azan {{ prayer_next }} akan berkumandang sebentar nanti.
+            - choose:
+                - conditions:
+                    - condition: template
+                      value_template: >-
+                        {{ 'Persistent Notification' in notification_options }}
+                  sequence:
+                    - action: persistent_notification.create
+                      data:
+                        notification_id: esolat_remind
+                        title: >-
+                          🕋 eSolat - Waktu {{ prayer_next }} ⏰
+                        message: >-
+                          {{ now().strftime('%-I:%M %p') }} - Azan {{ prayer_next }} akan berkumandang sebentar nanti.
+                - conditions:
+                    - condition: template
+                      value_template: >-
+                        {{ 'Mobile Notification' in notification_options }}
+                  sequence:
+                    - action: notify.notify
+                      data:
+                        title: >-
+                          🕋 eSolat - Waktu {{ prayer_next }} ⏰
+                        message: >-
+                          {{ as_timestamp(state_attr(esolattakwim, (state_attr(esolattakwim,'next') | lower))) | timestamp_custom('%-I:%M %p') }} - Azan {{ prayer_next }} akan berkumandang sebentar nanti.
 mode: single
