@@ -59,8 +59,10 @@ blueprint:
 
 variables:
   esolattakwim: !input esolattakwim
-  current24h: {{ now().strftime('%H:%M') == as_timestamp(state_attr(esolattakwim,'current')) | timestamp_custom('%H:%M') }}
-  next24h: {{ now().strftime('%H:%M') == as_timestamp(state_attr(esolattakwim,'next')) | timestamp_custom('%H:%M') }}
+  current24h: >-
+    {{ now().strftime('%H:%M') == as_timestamp(state_attr(esolattakwim,'current')) | timestamp_custom('%H:%M') }}
+  next24h: >-
+    {{ now().strftime('%H:%M') == as_timestamp(state_attr(esolattakwim,'next')) | timestamp_custom('%H:%M') }}
   speaker_type: !input speaker_type
   speaker_entity: !input speaker_entity
   reminder: !input reminder
