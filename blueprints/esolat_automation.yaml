@@ -95,6 +95,24 @@ action:
         {% set prayer_map = {'Imsak':'Imsak', 'Fajr':'Subuh', 'Syuruk':'Syuruk',
         'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{{
         prayer_map[state_attr(esolattakwim,'next')] }}
+  - action: persistent_notification.create
+    data: notification_id: esolat_debug
+    title: >-
+      🕋 [DEBUG] eSolat - Variables Check ✅
+    message: >-
+      prayer - {{ prayer }}{{ '\n' }}
+      prayer_next - {{ prayer_next }}{{ '\n' }}
+      prayer_next - {{ prayer_next }}{{ '\n' }}
+      esolattakwim - {{ esolattakwim }}{{ '\n' }}
+      current24h - {{ current24h }}{{ '\n' }}
+      next24h - {{ next24h }}{{ '\n' }}
+      speaker_type - {{ speaker_type }}{{ '\n' }}
+      speaker_entity - {{ speaker_entity }}{{ '\n' }}
+      reminder - {{ reminder }}{{ '\n' }}
+      audio_azan - {{ audio_azan }}{{ '\n' }}
+      audio_azansubuh - {{ audio_azansubuh }}{{ '\n' }}
+      notification_options - {{ notification_options }}
+      
   - choose:
       - conditions:
           - condition: trigger
@@ -107,7 +125,7 @@ action:
                       value_template: >-
                         {{ 'Persistent Notification' in notification_options }}
                   sequence:
-                    - service: persistent_notification.create
+                    - action: persistent_notification.create
                       data:
                         notification_id: esolat_notify
                         title: >-
@@ -119,7 +137,7 @@ action:
                       value_template: >-
                         {{ 'Mobile Notification' in notification_options }}
                   sequence:
-                    - service: notify.notify
+                    - action: notify.notify
                       data:
                         title: >-
                           🕋 eSolat - Waktu {{ prayer }}
@@ -135,7 +153,7 @@ action:
                             - condition: template
                               value_template: "{{ speaker_type == 'Google' }}"
                           sequence:
-                            - service: media_player.play_media
+                            - action: media_player.play_media
                               target:
                                 entity_id: !input speaker_entity
                               data:
@@ -151,7 +169,7 @@ action:
                             - condition: template
                               value_template: "{{ speaker_type == 'Alexa' }}"
                           sequence:
-                            - service: notify.alexa_media
+                            - action: notify.alexa_media
                               continue_on_error: true
                               data:
                                 data:
@@ -175,7 +193,7 @@ action:
                       value_template: >-
                         {{ 'Persistent Notification' in notification_options }}
                   sequence:
-                    - service: persistent_notification.create
+                    - action: persistent_notification.create
                       data:
                         notification_id: esolat_remind
                         title: >-
@@ -187,7 +205,7 @@ action:
                       value_template: >-
                         {{ 'Mobile Notification' in notification_options }}
                   sequence:
-                    - service: notify.notify
+                    - action: notify.notify
                       data:
                         title: >-
                           🕋 eSolat - Waktu {{ prayer_next }} ⏰
