@@ -1,6 +1,6 @@
 blueprint:
   name: 🕋 eSolat Automation Blueprint
-  description: v1.0 beta3e - Blueprint for eSolat prayer time notifications with speaker alerts.
+  description: v1.0 beta3f - Blueprint for eSolat prayer time notifications with speaker alerts.
   author: Zubir Jamal
   domain: automation
   input:
@@ -41,13 +41,13 @@ blueprint:
       description: URL of your preferred azan audio file.
       selector:
         text: 
-      default: "https://dl.sndup.net/c7sgg/azan_alexa.mp3"
+      default: "https://github.com/zubir2k/HomeAssistantAdzan/raw/refs/heads/main/audio/azan_alexa.mp3"
     audio_azansubuh:
       name: Azan Subuh
       description: URL of your preferred azan audio file.
       selector:
         text: 
-      default: "https://dl.sndup.net/rkrk/azansubuh_alexa.mp3"
+      default: "https://github.com/zubir2k/HomeAssistantAdzan/raw/refs/heads/main/audio/azansubuh_alexa.mp3"
     notification_options:
       name: Notification Options
       description: Select notification types to use.
@@ -62,16 +62,24 @@ blueprint:
 
 variables:
   esolattakwim: !input esolattakwim
-  current24h: >-
-    {{ as_timestamp(state_attr(esolattakwim,'current')) | timestamp_custom('%H:%M') }}
-  next24h: >-
-    {{ as_timestamp(state_attr(esolattakwim,'next')) | timestamp_custom('%H:%M') }}
   speaker_type: !input speaker_type
   speaker_entity: !input speaker_entity
   reminder: !input reminder
   audio_azan: !input audio_azan
   audio_azansubuh: !input audio_azansubuh
   notification_options: !input notification_options
+  current24h: >-
+    {{ as_timestamp(state_attr(esolattakwim,'current')) | timestamp_custom('%H:%M') }}
+  next24h: >-
+    {{ as_timestamp(state_attr(esolattakwim,'next')) | timestamp_custom('%H:%M') }}
+  prayer: >-
+    {% set prayer_map = {'Imsak':'Imsak', 'Fajr':'Subuh', 'Syuruk':'Syuruk',
+    'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{{
+    prayer_map[state_attr(esolattakwim,'current')] }}
+  prayer_next: >-
+    {% set prayer_map = {'Imsak':'Imsak', 'Fajr':'Subuh', 'Syuruk':'Syuruk',
+    'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{{
+    prayer_map[state_attr(esolattakwim,'next')] }}
             
 trigger:
   - platform: template
@@ -89,15 +97,6 @@ trigger:
 condition: []
 
 action:
-  - variables:
-      prayer: >-
-        {% set prayer_map = {'Imsak':'Imsak', 'Fajr':'Subuh', 'Syuruk':'Syuruk',
-        'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{{
-        prayer_map[state_attr(esolattakwim,'current')] }}
-      prayer_next: >-
-        {% set prayer_map = {'Imsak':'Imsak', 'Fajr':'Subuh', 'Syuruk':'Syuruk',
-        'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{{
-        prayer_map[state_attr(esolattakwim,'next')] }}
   - action: persistent_notification.create
     data:
       notification_id: esolat_check
