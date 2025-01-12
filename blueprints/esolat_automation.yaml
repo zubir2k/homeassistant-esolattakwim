@@ -1,10 +1,10 @@
 blueprint:
   name: 🕋 eSolat Automation Blueprint
-  description: v1.0 beta3g - Blueprint for eSolat prayer time notifications with speaker alerts.
+  description: v1.0 beta4a - Blueprint for eSolat prayer time notifications with speaker alerts.
   author: zubir2k
   domain: automation
   input:
-    esolattakwim:
+    select_esolattakwim:
       name: eSolat Calendar Entity
       description: Please ensure the eSolat Takwim has been configured.
       default: calendar.esolat_takwim
@@ -12,7 +12,7 @@ blueprint:
         entity:
           domain: calendar
           integration: esolattakwim
-    speaker_type:
+    select_speaker_type:
       name: Speaker Type
       description: Type of speaker to use for the alert (Google or Alexa).
       default: Google
@@ -21,13 +21,13 @@ blueprint:
           options:
             - Google
             - Alexa
-    speaker_entity:
+    select_speaker_entity:
       name: Speaker Entity
       description: The media player entity for the speaker.
       selector:
         entity:
           domain: media_player
-    reminder:
+    slider_reminder:
       name: Azan Reminder
       description: Minute reminder before prayer time
       default: 15
@@ -36,19 +36,19 @@ blueprint:
           min: 5
           max: 30
           mode: slider
-    audio_azan:
+    txt_audio_azan:
       name: Azan
       description: URL of your preferred azan audio file.
       selector:
         text: 
       default: "https://github.com/zubir2k/HomeAssistantAdzan/raw/refs/heads/main/audio/azan_alexa.mp3"
-    audio_azansubuh:
+    txt_audio_azansubuh:
       name: Azan Subuh
       description: URL of your preferred azan audio file.
       selector:
         text: 
       default: "https://github.com/zubir2k/HomeAssistantAdzan/raw/refs/heads/main/audio/azansubuh_alexa.mp3"
-    notification_options:
+    chk_notification_options:
       name: Notification Options
       description: Select notification types to use.
       default: "Persistent Notification"
@@ -61,25 +61,29 @@ blueprint:
             - Audio Notification
 
 variables:
-  esolattakwim: !input esolattakwim
-  speaker_type: !input speaker_type
-  speaker_entity: !input speaker_entity
-  reminder: !input reminder
-  audio_azan: !input audio_azan
-  audio_azansubuh: !input audio_azansubuh
-  notification_options: !input notification_options
+  esolattakwim: !input select_esolattakwim
+  speaker_type: !input select_speaker_type
+  speaker_entity: !input select_speaker_entity
+  reminder: !input slider_reminder
+  audio_azan: !input txt_audio_azan
+  audio_azansubuh: !input txt_audio_azansubuh
+  notification_options: !input chk_notification_options
+  current: >
+    {{ states[esolattakwim].attributes.current | lower }}
   current24h: >
-    {{ as_timestamp(state_attr(esolattakwim,'current')) | timestamp_custom('%H:%M') }}
+    {{ as_timestamp(state_attr(esolattakwim,current)) | timestamp_custom('%H:%M') }}
+  next: >
+    {{ states[esolattakwim].attributes.next | lower }}
   next24h: >
-    {{ as_timestamp(state_attr(esolattakwim,'next')) | timestamp_custom('%H:%M') }}
+    {{ as_timestamp(state_attr(esolattakwim,next)) | timestamp_custom('%H:%M') }}
   prayer: >
     {% set prayer_map = {'Imsak':'Imsak', 'Fajr':'Subuh', 'Syuruk':'Syuruk',
     'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{{
-    prayer_map[state_attr(esolattakwim,'current')] }}
+    prayer_map[(current | title)] }}
   prayer_next: >
     {% set prayer_map = {'Imsak':'Imsak', 'Fajr':'Subuh', 'Syuruk':'Syuruk',
     'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{{
-    prayer_map[state_attr(esolattakwim,'next')] }}
+    prayer_map[(next | title)] }}
 
 mode: single
            
@@ -215,4 +219,4 @@ action:
                         title: >-
                           🕋 eSolat - Waktu {{ prayer_next }} ⏰
                         message: >-
-                          {{ as_timestamp(state_attr(esolattakwim, (state_attr(esolattakwim,'next') | lower))) | timestamp_custom('%-I:%M %p') }} - Azan {{ prayer_next }} akan berkumandang sebentar nanti.
+                          {{ as_timestamp(state_attr(esolattakwim,next)) | timestamp_custom('%-I:%M %p') }} - Azan {{ prayer_next }} akan berkumandang sebentar nanti.
