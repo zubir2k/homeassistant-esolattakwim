@@ -1,6 +1,6 @@
 blueprint:
   name: 🕋 eSolat Automation Blueprint
-  description: v1.0 beta4a - Blueprint for eSolat prayer time notifications with speaker alerts.
+  description: v1.0 beta4b - Blueprint for eSolat prayer time notifications with speaker alerts.
   author: zubir2k
   domain: automation
   input:
@@ -68,19 +68,19 @@ variables:
   audio_azan: !input txt_audio_azan
   audio_azansubuh: !input txt_audio_azansubuh
   notification_options: !input chk_notification_options
-  current: >
+  current: >-
     {{ states[esolattakwim].attributes.current | lower }}
-  current24h: >
+  current24h: >-
     {{ as_timestamp(state_attr(esolattakwim,current)) | timestamp_custom('%H:%M') }}
-  next: >
+  next: >-
     {{ states[esolattakwim].attributes.next | lower }}
-  next24h: >
+  next24h: >-
     {{ as_timestamp(state_attr(esolattakwim,next)) | timestamp_custom('%H:%M') }}
-  prayer: >
+  prayer: >-
     {% set prayer_map = {'Imsak':'Imsak', 'Fajr':'Subuh', 'Syuruk':'Syuruk',
     'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{{
     prayer_map[(current | title)] }}
-  prayer_next: >
+  prayer_next: >-
     {% set prayer_map = {'Imsak':'Imsak', 'Fajr':'Subuh', 'Syuruk':'Syuruk',
     'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{{
     prayer_map[(next | title)] }}
