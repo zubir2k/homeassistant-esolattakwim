@@ -1,7 +1,7 @@
 blueprint:
   name: 🕋 eSolat Automation Blueprint
-  description: v1.0 beta3f - Blueprint for eSolat prayer time notifications with speaker alerts.
-  author: Zubir Jamal
+  description: v1.0 beta3g - Blueprint for eSolat prayer time notifications with speaker alerts.
+  author: zubir2k
   domain: automation
   input:
     esolattakwim:
@@ -68,28 +68,30 @@ variables:
   audio_azan: !input audio_azan
   audio_azansubuh: !input audio_azansubuh
   notification_options: !input notification_options
-  current24h: >-
+  current24h: >
     {{ as_timestamp(state_attr(esolattakwim,'current')) | timestamp_custom('%H:%M') }}
-  next24h: >-
+  next24h: >
     {{ as_timestamp(state_attr(esolattakwim,'next')) | timestamp_custom('%H:%M') }}
-  prayer: >-
+  prayer: >
     {% set prayer_map = {'Imsak':'Imsak', 'Fajr':'Subuh', 'Syuruk':'Syuruk',
     'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{{
     prayer_map[state_attr(esolattakwim,'current')] }}
-  prayer_next: >-
+  prayer_next: >
     {% set prayer_map = {'Imsak':'Imsak', 'Fajr':'Subuh', 'Syuruk':'Syuruk',
     'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{{
     prayer_map[state_attr(esolattakwim,'next')] }}
-            
+
+mode: single
+           
 trigger:
   - platform: template
     id: esolat_prayer
-    value_template: >-
+    value_template: >
       {{ now().strftime('%H:%M') == current24h }}
 
   - platform: template
     id: esolat_reminder
-    value_template: >-
+    value_template: >
       {{ (as_local(now()).strftime("%s") | int + (reminder*60)) |
       timestamp_custom("%H:%M", false) ==
       next24h }}
@@ -214,4 +216,3 @@ action:
                           🕋 eSolat - Waktu {{ prayer_next }} ⏰
                         message: >-
                           {{ as_timestamp(state_attr(esolattakwim, (state_attr(esolattakwim,'next') | lower))) | timestamp_custom('%-I:%M %p') }} - Azan {{ prayer_next }} akan berkumandang sebentar nanti.
-mode: single
