@@ -1,6 +1,6 @@
 blueprint:
   name: 🕋 eSolat Automation Blueprint
-  description: v1.0 beta4d - Blueprint for eSolat prayer time notifications with speaker alerts.
+  description: v1.0 beta4e - Blueprint for eSolat prayer time notifications with speaker alerts.
   author: zubir2k
   domain: automation
   input:
@@ -109,18 +109,24 @@ action:
       title: >-
         🕋 [DEBUG] eSolat - Variables Check ✅
       message: >-
-        prayer - {{ prayer }}{{ '\n' }}
-        prayer_next - {{ prayer_next }}{{ '\n' }}
-        prayer_next - {{ prayer_next }}{{ '\n' }}
+        **Config**{{ '\n' }}
         esolattakwim - {{ esolattakwim }}{{ '\n' }}
-        current24h - {{ current24h }}{{ '\n' }}
-        next24h - {{ next24h }}{{ '\n' }}
         speaker_type - {{ speaker_type }}{{ '\n' }}
         speaker_entity - {{ speaker_entity }}{{ '\n' }}
         reminder - {{ reminder }}{{ '\n' }}
-        audio_azan - {{ audio_azan }}{{ '\n' }}
-        audio_azansubuh - {{ audio_azansubuh }}{{ '\n' }}
-        notification_options - {{ notification_options }}
+        notification_options {{ notification_options }}{{ '\n' }}{{ '\n' }}
+        
+        **Audio**{{ '\n' }}
+        audio_azan{{ '\n' }}{{ audio_azan }}{{ '\n' }}
+        audio_azansubuh{{ '\n' }}{{ audio_azansubuh }}{{ '\n' }}{{ '\n' }}
+        
+        **Prayer Time**{{ '\n' }}
+        current - {{ current }}{{ '\n' }}
+        current24h - {{ current24h }}{{ '\n' }}
+        next - {{ next }}{{ '\n' }}
+        next24h - {{ next24h }}{{ '\n' }}
+        prayer - {{ prayer }}{{ '\n' }}
+        prayer_next - {{ prayer_next }}{{ '\n' }}
       
   - choose:
       - conditions:
