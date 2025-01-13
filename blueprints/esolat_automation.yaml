@@ -1,6 +1,6 @@
 blueprint:
   name: 🕋 eSolat Automation Blueprint
-  description: v1.0 beta4c - Blueprint for eSolat prayer time notifications with speaker alerts.
+  description: v1.0 beta4d - Blueprint for eSolat prayer time notifications with speaker alerts.
   author: zubir2k
   domain: automation
   input:
@@ -184,8 +184,7 @@ action:
                                 data:
                                   type: tts
                                 target: >-
-                                  {% set speaker = speaker_entity %}
-                                  {{ speaker | replace("media_player.","notify.alexa_media_") }}
+                                  {{ speaker_entity | replace("media_player.","notify.alexa_media_") }}
                                 message: >-
                                   <audio src='{% if prayer == "Subuh" 
                                   %}https://dl.sndup.net/rkrk/azansubuh_alexa.mp3{% else
