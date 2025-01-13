@@ -1,6 +1,6 @@
 blueprint:
   name: 🕋 eSolat Automation Blueprint
-  description: v1.0 beta4b - Blueprint for eSolat prayer time notifications with speaker alerts.
+  description: v1.0 beta4c - Blueprint for eSolat prayer time notifications with speaker alerts.
   author: zubir2k
   domain: automation
   input:
@@ -164,7 +164,7 @@ action:
                           sequence:
                             - action: media_player.play_media
                               target:
-                                entity_id: !input speaker_entity
+                                entity_id: "{{ speaker_entity }}"
                               data:
                                 media_content_type: audio/mp3
                                 media_content_id: >-
