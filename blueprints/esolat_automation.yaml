@@ -1,6 +1,6 @@
 blueprint:
   name: 🕋 eSolat Automation Blueprint
-  description: v1.0 beta4e - Blueprint for eSolat prayer time notifications with speaker alerts.
+  description: v1.0 beta4f - Blueprint for eSolat prayer time notifications with speaker alerts.
   author: zubir2k
   domain: automation
   input:
@@ -96,7 +96,7 @@ trigger:
   - platform: template
     id: esolat_reminder
     value_template: >
-      {{ (as_local(now()).strftime("%s") | int + (reminder*60)) |
+      {{ (as_local(now()).strftime("%s") | int + ((reminder | int)*60)) |
       timestamp_custom("%H:%M", false) ==
       next24h }}
 
