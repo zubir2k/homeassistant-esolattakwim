@@ -136,7 +136,7 @@ automation:
                       - esolat_reminder
                   - condition: template
                     value_template: >-
-                      {{ state_attr('calendar.esolat_takwim','current') in
+                      {{ state_attr('calendar.esolat_takwim','next') in
                       ['Fajr','Dhuhr','Asr','Maghrib','Isha'] }}
                     alias: Waktu Solat
             sequence:
