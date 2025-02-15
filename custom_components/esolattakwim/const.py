@@ -94,6 +94,6 @@ ZONES = {
     "trg02": "TRG02 - Besut, Setiu",
     "trg03": "TRG03 - Hulu Terengganu",
     "trg04": "TRG04 - Dungun, Kemaman",
-    "wly01": "WLY01 - Labuan",
-    "wly02": "WLY02 - Putrajaya"
+    "wly01": "WLY01 - Kuala Lumpur, Putrajaya",
+    "wly02": "WLY02 - Labuan"
 }
