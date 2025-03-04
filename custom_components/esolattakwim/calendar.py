@@ -72,15 +72,19 @@ class EsolatCalendar(CalendarEntity):
             await self.async_update_ha_state(force_refresh=True)
 
     async def update_zone(self, new_zone: str) -> None:
-        """Update the zone and refresh prayer times."""
+        """Update the zone and fetch new prayer times."""
         _LOGGER.debug("Updating zone from %s to %s", self.zone, new_zone)
         self.zone = new_zone
         self._attr_extra_state_attributes["zone"] = new_zone
         self._prayer_times = PrayerTimesData(new_zone, self.hass)
-        await self._prayer_times.load_cached_data()
+        # Fetch new data immediately instead of loading cache
+        async with aiohttp.ClientSession() as session:
+            success = await self._prayer_times.fetch_prayer_times(session)
+            if not success:
+                _LOGGER.warning("Failed to fetch prayer times for zone %s, using empty data until next update", new_zone)
 
     async def load_cached_data(self) -> None:
-        """Load cached Islamic events and prayer times."""
+        """Load cached Islamic events and prayer times on initial setup."""
         await self._prayer_times.load_cached_data()
         cached_events = await self._event_store.async_load()
         if cached_events:
