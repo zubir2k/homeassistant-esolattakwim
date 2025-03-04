@@ -9,6 +9,7 @@ from aiohttp import FormData
 
 from homeassistant.components.calendar import CalendarEvent
 from homeassistant.util import dt
+from homeassistant.helpers.storage import Store
 
 from .const import PRAYER_NAMES, PRAYER_TIMES_API, TIMEZONE
 from .utils import format_prayer_times, get_next_prayer_info
@@ -18,12 +19,44 @@ _LOGGER = logging.getLogger(__name__)
 class PrayerTimesData:
     """Class to handle prayer times data."""
 
-    def __init__(self, zone: str) -> None:
-        """Initialize the prayer times data."""
+    STORAGE_VERSION = 1
+    STORAGE_KEY = "esolat_prayer_times_{zone}"
+
+    def __init__(self, zone: str, hass) -> None:
+        """Initialize the prayer times data with Home Assistant instance."""
         self._prayer_times: dict[str, list[CalendarEvent]] = {}
         self._last_update_year: int | None = None
         self._daily_prayer_times: Dict[str, Dict[str, str]] = {}
         self._zone = zone
+        self.hass = hass
+        self._store = Store(hass, self.STORAGE_VERSION, self.STORAGE_KEY.format(zone=zone))
+
+    async def load_cached_data(self) -> None:
+        """Load cached prayer times from storage."""
+        cached_data = await self._store.async_load()
+        if cached_data:
+            self._daily_prayer_times = cached_data.get("daily_prayer_times", {})
+            self._last_update_year = cached_data.get("last_update_year")
+            prayer_times_raw = cached_data.get("prayer_times", {})
+            self._prayer_times = {
+                prayer: [CalendarEvent(**event) for event in events]
+                for prayer, events in prayer_times_raw.items()
+            }
+            _LOGGER.debug("Loaded cached prayer times for zone %s", self._zone)
+
+    async def save_data(self) -> None:
+        """Save prayer times to persistent storage."""
+        data = {
+            "daily_prayer_times": self._daily_prayer_times,
+            "prayer_times": {
+                prayer: [{"summary": e.summary, "start": e.start.isoformat(), "end": e.end.isoformat()}
+                         for e in events]
+                for prayer, events in self._prayer_times.items()
+            },
+            "last_update_year": self._last_update_year
+        }
+        await self._store.async_save(data)
+        _LOGGER.debug("Saved prayer times for zone %s", self._zone)
 
     def get_todays_prayer_times(self) -> dict[str, str]:
         """Get prayer times for today."""
@@ -79,16 +112,14 @@ class PrayerTimesData:
 
         def normalize_time(time_str: str) -> str:
             """Ensure time is in %H:%M:%S format by adding seconds if missing."""
-            if len(time_str.split(":")) == 2:  # If only HH:MM is provided
+            if len(time_str.split(":")) == 2:
                 return f"{time_str}:00"
             return time_str
 
-        # Normalize all prayer times to include seconds
         normalized_prayers = {
             prayer: normalize_time(time_str) for prayer, time_str in prayer_times.items()
         }
 
-        # Sort today's prayer times
         sorted_prayers = sorted(
             [(k, v) for k, v in normalized_prayers.items() if ":" in v],
             key=lambda x: datetime.strptime(x[1], "%H:%M:%S"),
@@ -96,21 +127,15 @@ class PrayerTimesData:
 
         for i, (prayer, time_str) in enumerate(sorted_prayers):
             prayer_time = datetime.strptime(time_str, "%H:%M:%S").time()
-
             if prayer_time > current_time:
-                # Set next prayer and its time
                 next_prayer = PRAYER_NAMES.get(prayer, prayer)
                 next_prayer_time = time_str
-                # Set current prayer to the one just before the next prayer
                 if i > 0:
                     current_prayer = PRAYER_NAMES.get(sorted_prayers[i - 1][0], sorted_prayers[i - 1][0])
                 break
 
-        # Handle case when no next prayer is found (after Isyak)
         if not next_prayer and sorted_prayers:
             current_prayer = PRAYER_NAMES.get(sorted_prayers[-1][0], sorted_prayers[-1][0])
-
-            # Look ahead to the first prayer of the next day
             next_day = (now + timedelta(days=1)).strftime("%d-%b-%Y")
             next_day_prayer_times = self._daily_prayer_times.get(next_day, {})
             if next_day_prayer_times:
@@ -122,7 +147,6 @@ class PrayerTimesData:
                     next_prayer = PRAYER_NAMES.get(sorted_next_day_prayers[0][0], sorted_next_day_prayers[0][0])
                     next_prayer_time = normalize_time(sorted_next_day_prayers[0][1])
 
-        # Handle case when the current time is before the first prayer
         if not current_prayer:
             previous_day = (now - timedelta(days=1)).strftime("%d-%b-%Y")
             previous_prayer_times = self._daily_prayer_times.get(previous_day, {})
@@ -136,19 +160,15 @@ class PrayerTimesData:
 
         return current_prayer, next_prayer, next_prayer_time
 
-
     async def fetch_prayer_times(self, session: aiohttp.ClientSession) -> bool:
         """Fetch prayer times for the current year and store Hijri dates."""
         current_year = dt.now(TIMEZONE).year
         current_month = dt.now(TIMEZONE).month
 
-        # Clear existing prayer times to avoid duplicates
         self._prayer_times.clear()
 
-        # Purge older data
         self._purge_old_prayer_times(current_year)
 
-        # Helper to fetch yearly data
         async def _fetch_yearly_prayer_times(year: int):
             url = PRAYER_TIMES_API.format(zone=self._zone)
             start_date = datetime(year, 1, 1)
@@ -170,17 +190,12 @@ class PrayerTimesData:
 
                 for prayer_time in data.get("prayerTime", []):
                     try:
-                        # Extract Hijri date and Gregorian date
                         date_str = prayer_time["date"]
                         hijri_date = prayer_time["hijri"]
-
-                        # Store daily prayer times with Hijri date
                         self._daily_prayer_times[date_str] = {
                             "hijri": hijri_date,
                             **{prayer: prayer_time[prayer] for prayer in PRAYER_NAMES if prayer in prayer_time},
                         }
-
-                        # Store calendar events as before
                         for prayer, display_name in PRAYER_NAMES.items():
                             if prayer in prayer_time:
                                 time_str = prayer_time[prayer]
@@ -199,40 +214,35 @@ class PrayerTimesData:
                                         start=start,
                                         end=end,
                                     )
-
                                     if prayer not in self._prayer_times:
                                         self._prayer_times[prayer] = []
                                     self._prayer_times[prayer].append(event)
-
                     except (KeyError, ValueError) as err:
                         _LOGGER.error("Error parsing prayer time: %s", err)
                         continue
             return True
 
-        # Fetch prayer times for the current year
-        await _fetch_yearly_prayer_times(current_year)
-
-        # Fetch next year's prayer times in December
+        success = await _fetch_yearly_prayer_times(current_year)
         if current_month == 12:
-            await _fetch_yearly_prayer_times(current_year + 1)
+            success &= await _fetch_yearly_prayer_times(current_year + 1)
 
-        self._last_update_year = current_year
-        return True
+        if success:
+            self._last_update_year = current_year
+            await self.save_data()
+
+        return success
 
     def _purge_old_prayer_times(self, current_year: int) -> None:
-        """Purge prayer times for years before the current year, but retain the last day of the previous year."""
+        """Purge prayer times for years before the current year, retaining the last day of the previous year."""
         last_day_previous_year = datetime(current_year - 1, 12, 31).strftime("%d-%b-%Y")
-
         keys_to_delete = [
             date_str for date_str in self._daily_prayer_times.keys()
             if datetime.strptime(date_str, "%d-%b-%Y").year < current_year - 1 or
             (datetime.strptime(date_str, "%d-%b-%Y").year == current_year - 1 and date_str != last_day_previous_year)
         ]
-
         for key in keys_to_delete:
             del self._daily_prayer_times[key]
 
-        # Purge events but retain the last day of the previous year
         for prayer in list(self._prayer_times.keys()):
             self._prayer_times[prayer] = [
                 event for event in self._prayer_times[prayer]
