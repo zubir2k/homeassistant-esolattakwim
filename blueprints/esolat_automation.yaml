@@ -1,6 +1,6 @@
 blueprint:
   name: 🕋 eSolat Automation Blueprint
-  description: v1.0 beta5 - Blueprint for eSolat prayer time notifications with speaker alerts.
+  description: v1.0 beta6 - Blueprint for eSolat prayer time notifications with speaker alerts.
   author: zubir2k
   domain: automation
   input:
@@ -68,56 +68,75 @@ variables:
   audio_azan: !input txt_audio_azan
   audio_azansubuh: !input txt_audio_azansubuh
   notification_options: !input chk_notification_options
-  current: "{{ states[esolattakwim].attributes.current | lower }}"
-  next: "{{ states[esolattakwim].attributes.next | lower }}"
-  prayer: >-
-    {% set prayer_map = {'imsak':'Imsak', 'fajr':'Subuh', 'syuruk':'Syuruk',
-    'dhuhr':'Zohor', 'asr':'Asar', 'maghrib':'Maghrib', 'isha':'Isyak'} %}
-    {{ prayer_map[(current | title)] }}
-  prayer_next: >-
-    {% set prayer_map = {'imsak':'Imsak', 'fajr':'Subuh', 'syuruk':'Syuruk',
-    'dhuhr':'Zohor', 'asr':'Asar', 'maghrib':'Maghrib', 'isha':'Isyak'} %}
-    {{ prayer_map[(next | title)] }}
+  prayer_times:
+    fajr: "{{ states[esolattakwim].attributes.fajr }}"
+    dhuhr: "{{ states[esolattakwim].attributes.dhuhr }}"
+    asr: "{{ states[esolattakwim].attributes.asr }}"
+    maghrib: "{{ states[esolattakwim].attributes.maghrib }}"
+    isha: "{{ states[esolattakwim].attributes.isha }}"
+  prayer_map:
+    imsak: Imsak
+    fajr: Subuh
+    syuruk: Syuruk
+    dhuhr: Zohor
+    asr: Asar
+    maghrib: Maghrib
+    isha: Isyak
 
 mode: parallel
 
 trigger:
   # At Prayer Time Triggers
-  - platform: time
-    at: "{{ state_attr(esolattakwim, 'fajr') }}"
+  - platform: template
+    value_template: >-
+      {{ as_timestamp(now()) >= as_timestamp(states[esolattakwim].attributes.fajr) and 
+         as_timestamp(now()) < as_timestamp(states[esolattakwim].attributes.fajr) + 60 }}
     id: fajr_at
-  - platform: time
-    at: "{{ state_attr(esolattakwim, 'dhuhr') }}"
+  - platform: template
+    value_template: >-
+      {{ as_timestamp(now()) >= as_timestamp(states[esolattakwim].attributes.dhuhr) and 
+         as_timestamp(now()) < as_timestamp(states[esolattakwim].attributes.dhuhr) + 60 }}
     id: dhuhr_at
-  - platform: time
-    at: "{{ state_attr(esolattakwim, 'asr') }}"
+  - platform: template
+    value_template: >-
+      {{ as_timestamp(now()) >= as_timestamp(states[esolattakwim].attributes.asr) and 
+         as_timestamp(now()) < as_timestamp(states[esolattakwim].attributes.asr) + 60 }}
     id: asr_at
-  - platform: time
-    at: "{{ state_attr(esolattakwim, 'maghrib') }}"
+  - platform: template
+    value_template: >-
+      {{ as_timestamp(now()) >= as_timestamp(states[esolattakwim].attributes.maghrib) and 
+         as_timestamp(now()) < as_timestamp(states[esolattakwim].attributes.maghrib) + 60 }}
     id: maghrib_at
-  - platform: time
-    at: "{{ state_attr(esolattakwim, 'isha') }}"
+  - platform: template
+    value_template: >-
+      {{ as_timestamp(now()) >= as_timestamp(states[esolattakwim].attributes.isha) and 
+         as_timestamp(now()) < as_timestamp(states[esolattakwim].attributes.isha) + 60 }}
     id: isha_at
   # Before Prayer Time Triggers
   - platform: template
     value_template: >-
-      {{ reminder > 0 and as_timestamp(state_attr(esolattakwim, 'fajr')) - (reminder * 60) <= as_timestamp(now()) }}
+      {{ reminder > 0 and as_timestamp(now()) >= as_timestamp(states[esolattakwim].attributes.fajr) - (reminder * 60) and 
+         as_timestamp(now()) < as_timestamp(states[esolattakwim].attributes.fajr) - (reminder * 60) + 60 }}
     id: fajr_before
   - platform: template
     value_template: >-
-      {{ reminder > 0 and as_timestamp(state_attr(esolattakwim, 'dhuhr')) - (reminder * 60) <= as_timestamp(now()) }}
+      {{ reminder > 0 and as_timestamp(now()) >= as_timestamp(states[esolattakwim].attributes.dhuhr) - (reminder * 60) and 
+         as_timestamp(now()) < as_timestamp(states[esolattakwim].attributes.dhuhr) - (reminder * 60) + 60 }}
     id: dhuhr_before
   - platform: template
     value_template: >-
-      {{ reminder > 0 and as_timestamp(state_attr(esolattakwim, 'asr')) - (reminder * 60) <= as_timestamp(now()) }}
+      {{ reminder > 0 and as_timestamp(now()) >= as_timestamp(states[esolattakwim].attributes.asr) - (reminder * 60) and 
+         as_timestamp(now()) < as_timestamp(states[esolattakwim].attributes.asr) - (reminder * 60) + 60 }}
     id: asr_before
   - platform: template
     value_template: >-
-      {{ reminder > 0 and as_timestamp(state_attr(esolattakwim, 'maghrib')) - (reminder * 60) <= as_timestamp(now()) }}
+      {{ reminder > 0 and as_timestamp(now()) >= as_timestamp(states[esolattakwim].attributes.maghrib) - (reminder * 60) and 
+         as_timestamp(now()) < as_timestamp(states[esolattakwim].attributes.maghrib) - (reminder * 60) + 60 }}
     id: maghrib_before
   - platform: template
     value_template: >-
-      {{ reminder > 0 and as_timestamp(state_attr(esolattakwim, 'isha')) - (reminder * 60) <= as_timestamp(now()) }}
+      {{ reminder > 0 and as_timestamp(now()) >= as_timestamp(states[esolattakwim].attributes.isha) - (reminder * 60) and 
+         as_timestamp(now()) < as_timestamp(states[esolattakwim].attributes.isha) - (reminder * 60) + 60 }}
     id: isha_before
 
 condition:
@@ -128,6 +147,15 @@ condition:
       {{ trigger.id in at_ids or (trigger.id in before_ids and reminder > 0) }}
 
 action:
+  - variables:
+      current_prayer: >-
+        {% if trigger.id.startswith('fajr') %}fajr
+        {% elif trigger.id.startswith('dhuhr') %}dhuhr
+        {% elif trigger.id.startswith('asr') %}asr
+        {% elif trigger.id.startswith('maghrib') %}maghrib
+        {% elif trigger.id.startswith('isha') %}isha
+        {% endif %}
+      prayer_name: "{{ prayer_map[current_prayer] }}"
   - choose:
       - conditions:
           - condition: trigger
@@ -147,18 +175,18 @@ action:
                     - action: persistent_notification.create
                       data:
                         notification_id: "esolat_notify_{{ trigger.id }}"
-                        title: "🕋 eSolat - Waktu {{ prayer }}"
+                        title: "🕋 eSolat - Waktu {{ prayer_name }}"
                         message: >-
-                          {{ now().strftime('%-I:%M %p') }} - Sekarang telah masuk waktu {{ prayer }} bagi kawasan ini dan kawasan yang sama waktu dengannya.
+                          {{ now().strftime('%-I:%M %p') }} - Sekarang telah masuk waktu {{ prayer_name }} bagi kawasan ini dan kawasan yang sama waktu dengannya.
                 - conditions:
                     - condition: template
                       value_template: "{{ 'Mobile Notification' in notification_options }}"
                   sequence:
                     - action: notify.notify
                       data:
-                        title: "🕋 eSolat - Waktu {{ prayer }}"
+                        title: "🕋 eSolat - Waktu {{ prayer_name }}"
                         message: >-
-                          {{ now().strftime('%-I:%M %p') }} - Sekarang telah masuk waktu {{ prayer }} bagi kawasan ini dan kawasan yang sama waktu dengannya.
+                          {{ now().strftime('%-I:%M %p') }} - Sekarang telah masuk waktu {{ prayer_name }} bagi kawasan ini dan kawasan yang sama waktu dengannya.
                 - conditions:
                     - condition: template
                       value_template: "{{ 'Audio Notification' in notification_options }}"
@@ -174,9 +202,9 @@ action:
                               data:
                                 media_content_type: audio/mp3
                                 media_content_id: >-
-                                  {% if prayer == 'Subuh' %}{{ audio_azansubuh }}{% else %}{{ audio_azan }}{% endif %}
+                                  {% if prayer_name == 'Subuh' %}{{ audio_azansubuh }}{% else %}{{ audio_azan }}{% endif %}
                                 extra:
-                                  title: "Azan {{ prayer }}"
+                                  title: "Azan {{ prayer_name }}"
                                   thumb: "https://i.imgur.com/1U9Ehvr.png"
                         - conditions:
                             - condition: template
@@ -189,7 +217,7 @@ action:
                                   type: tts
                                 target: "{{ speaker_entity | replace('media_player.', 'notify.alexa_media_') }}"
                                 message: >-
-                                  <audio src='{% if prayer == "Subuh" %}https://dl.sndup.net/rkrk/azansubuh_alexa.mp3{% else %}https://dl.sndup.net/c7sgg/azan_alexa.mp3{% endif %}'/>
+                                  <audio src='{% if prayer_name == "Subuh" %}https://dl.sndup.net/rkrk/azansubuh_alexa.mp3{% else %}https://dl.sndup.net/c7sgg/azan_alexa.mp3{% endif %}'/>
 
       - conditions:
           - condition: trigger
@@ -209,38 +237,15 @@ action:
                     - action: persistent_notification.create
                       data:
                         notification_id: "esolat_remind_{{ trigger.id }}"
-                        title: "🕋 eSolat - Waktu {{ prayer_next }} ⏰"
+                        title: "🕋 eSolat - Waktu {{ prayer_name }} ⏰"
                         message: >-
-                          {{ now().strftime('%-I:%M %p') }} - Azan {{ prayer_next }} akan berkumandang sebentar nanti.
+                          {{ now().strftime('%-I:%M %p') }} - Azan {{ prayer_name }} akan berkumandang sebentar nanti.
                 - conditions:
                     - condition: template
                       value_template: "{{ 'Mobile Notification' in notification_options }}"
                   sequence:
                     - action: notify.notify
                       data:
-                        title: "🕋 eSolat - Waktu {{ prayer_next }} ⏰"
+                        title: "🕋 eSolat - Waktu {{ prayer_name }} ⏰"
                         message: >-
-                          {{ as_timestamp(state_attr(esolattakwim, next)) | timestamp_custom('%-I:%M %p') }} - Azan {{ prayer_next }} akan berkumandang sebentar nanti.
-
-  # Debug Notification (optional, comment out if not needed)
-  - action: persistent_notification.create
-    data:
-      notification_id: "esolat_debug"
-      title: "🕋 [DEBUG] eSolat - Variables Check ✅"
-      message: >-
-        **Config**{{ '\n' }}
-        esolattakwim - {{ esolattakwim }}{{ '\n' }}
-        speaker_type - {{ speaker_type }}{{ '\n' }}
-        speaker_entity - {{ speaker_entity }}{{ '\n' }}
-        reminder - {{ reminder }}{{ '\n' }}
-        notification_options - {{ notification_options }}{{ '\n' }}{{ '\n' }}
-        
-        **Audio**{{ '\n' }}
-        audio_azan - {{ audio_azan }}{{ '\n' }}
-        audio_azansubuh - {{ audio_azansubuh }}{{ '\n' }}{{ '\n' }}
-        
-        **Prayer Time**{{ '\n' }}
-        current - {{ current }}{{ '\n' }}
-        next - {{ next }}{{ '\n' }}
-        prayer - {{ prayer }}{{ '\n' }}
-        prayer_next - {{ prayer_next }}{{ '\n' }}
+                          {{ as_timestamp(states[esolattakwim].attributes[current_prayer]) | timestamp_custom('%-I:%M %p') }} - Azan {{ prayer_name }} akan berkumandang sebentar nanti.
