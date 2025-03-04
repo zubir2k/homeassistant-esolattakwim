@@ -42,7 +42,7 @@ class PrayerTimesData:
                 self._prayer_times = {}
                 self._last_update_year = None
             else:
-                self._daily_praver_times = cached_data.get("daily_prayer_times", {})
+                self._daily_prayer_times = cached_data.get("daily_prayer_times", {})
                 self._last_update_year = cached_data.get("last_update_year")
                 prayer_times_raw = cached_data.get("prayer_times", {})
                 self._prayer_times = {
@@ -243,12 +243,10 @@ class PrayerTimesData:
         return success
 
     def _purge_old_prayer_times(self, current_year: int) -> None:
-        """Purge prayer times for years before the current year, retaining the last day of the previous year."""
-        last_day_previous_year = datetime(current_year - 1, 12, 31).strftime("%d-%b-%Y")
+        """Purge all prayer times before the current year."""
         keys_to_delete = [
             date_str for date_str in self._daily_prayer_times.keys()
-            if datetime.strptime(date_str, "%d-%b-%Y").year < current_year - 1 or
-            (datetime.strptime(date_str, "%d-%b-%Y").year == current_year - 1 and date_str != last_day_previous_year)
+            if datetime.strptime(date_str, "%d-%b-%Y").year < current_year
         ]
         for key in keys_to_delete:
             del self._daily_prayer_times[key]
@@ -256,8 +254,7 @@ class PrayerTimesData:
         for prayer in list(self._prayer_times.keys()):
             self._prayer_times[prayer] = [
                 event for event in self._prayer_times[prayer]
-                if event.start.year >= current_year or
-                (event.start.year == current_year - 1 and event.start.strftime("%d-%b-%Y") == last_day_previous_year)
+                if event.start.year >= current_year
             ]
             if not self._prayer_times[prayer]:
                 del self._prayer_times[prayer]
