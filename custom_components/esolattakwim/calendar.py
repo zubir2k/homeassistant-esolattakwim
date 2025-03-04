@@ -20,7 +20,7 @@ from .prayer_times import PrayerTimesData
 _LOGGER = logging.getLogger(__name__)
 
 EVENTS_STORAGE_VERSION = 1
-EVENTS_STORAGE_KEY = "esolat_events_{zone}"
+EVENTS_STORAGE_KEY = "esolat_events"
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -29,7 +29,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the eSolat Takwim Malaysia Calendar platform."""
     zone = config_entry.data["zone"]
-    calendar = EsolatCalendar(hass, zone)
+    calendar = EsolatCalendar(hass, zone, config_entry)
     await calendar.load_cached_data()
     async_add_entities([calendar], True)
 
@@ -38,14 +38,15 @@ class EsolatCalendar(CalendarEntity):
     
     _attr_has_entity_name = True
     _attr_name = "eSolat Takwim"
+    _attr_unique_id = "esolat_takwim"  # Static unique_id
 
-    def __init__(self, hass: HomeAssistant, zone: str) -> None:
+    def __init__(self, hass: HomeAssistant, zone: str, config_entry: ConfigEntry) -> None:
         """Initialize the calendar."""
         self.hass = hass
         self.zone = zone
+        self._config_entry = config_entry
         self._islamic_events: list[CalendarEvent] = []
         self._prayer_times = PrayerTimesData(zone, hass)
-        self._attr_unique_id = f"esolat_takwim_{zone}"
         self._attr_extra_state_attributes = {
             "hijri_date": None,
             "hijri_full": None,
@@ -60,7 +61,23 @@ class EsolatCalendar(CalendarEntity):
             "isha": None,
             "zone": zone,
         }
-        self._event_store = Store(hass, EVENTS_STORAGE_VERSION, EVENTS_STORAGE_KEY.format(zone=zone))
+        self._event_store = Store(hass, EVENTS_STORAGE_VERSION, EVENTS_STORAGE_KEY)
+        self._config_entry.add_update_listener(self.async_config_entry_updated)
+
+    async def async_config_entry_updated(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+        """Handle config entry updates."""
+        new_zone = entry.data["zone"]
+        if new_zone != self.zone:
+            await self.update_zone(new_zone)
+            await self.async_update_ha_state(force_refresh=True)
+
+    async def update_zone(self, new_zone: str) -> None:
+        """Update the zone and refresh prayer times."""
+        _LOGGER.debug("Updating zone from %s to %s", self.zone, new_zone)
+        self.zone = new_zone
+        self._attr_extra_state_attributes["zone"] = new_zone
+        self._prayer_times = PrayerTimesData(new_zone, self.hass)
+        await self._prayer_times.load_cached_data()
 
     async def load_cached_data(self) -> None:
         """Load cached Islamic events and prayer times."""
@@ -68,14 +85,14 @@ class EsolatCalendar(CalendarEntity):
         cached_events = await self._event_store.async_load()
         if cached_events:
             self._islamic_events = [CalendarEvent(**event) for event in cached_events]
-            _LOGGER.debug("Loaded cached Islamic events for zone %s", self.zone)
+            _LOGGER.debug("Loaded cached Islamic events")
 
     async def save_events(self) -> None:
         """Save Islamic events to persistent storage."""
         events_data = [{"summary": e.summary, "start": e.start.isoformat(), "end": e.end.isoformat(), "description": e.description or ""}
                        for e in self._islamic_events]
         await self._event_store.async_save(events_data)
-        _LOGGER.debug("Saved Islamic events for zone %s", self.zone)
+        _LOGGER.debug("Saved Islamic events")
 
     @property
     def event(self) -> CalendarEvent | None:
@@ -109,12 +126,10 @@ class EsolatCalendar(CalendarEntity):
         """Update events and Hijri date."""
         try:
             async with aiohttp.ClientSession() as session:
-                # Update prayer times
                 success = await self._prayer_times.fetch_prayer_times(session)
                 if not success and not self._prayer_times._daily_prayer_times:
                     _LOGGER.warning("No prayer times available, using cached data if present")
                 
-                # Update prayer time attributes
                 current_prayer, next_prayer, next_prayer_time = self._prayer_times.get_current_and_next_prayer()
                 prayer_times = self._prayer_times.get_prayer_times_utc()
 
@@ -124,7 +139,6 @@ class EsolatCalendar(CalendarEntity):
                     **prayer_times,
                 })
 
-                # Extract Hijri date
                 today_date = dt.now(TIMEZONE).strftime("%d-%b-%Y")
                 today_prayer_times = self._prayer_times._daily_prayer_times.get(today_date, {})
                 hijri_date = today_prayer_times.get("hijri")
@@ -136,7 +150,6 @@ class EsolatCalendar(CalendarEntity):
                     self._attr_extra_state_attributes["hijri_date"] = hijri_date
                     self._attr_extra_state_attributes["hijri_full"] = hijri_full
 
-                # Fetch Islamic calendar events
                 async with session.get(ISLAMIC_EVENTS_API) as response:
                     if response.status != 200:
                         _LOGGER.warning("Failed to fetch Islamic events, using cached data: %s", response.status)

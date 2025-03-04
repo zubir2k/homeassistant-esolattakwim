@@ -20,7 +20,7 @@ class PrayerTimesData:
     """Class to handle prayer times data."""
 
     STORAGE_VERSION = 1
-    STORAGE_KEY = "esolat_prayer_times_{zone}"
+    STORAGE_KEY = "esolat_prayer_times"  # Static key
 
     def __init__(self, zone: str, hass) -> None:
         """Initialize the prayer times data with Home Assistant instance."""
@@ -29,24 +29,34 @@ class PrayerTimesData:
         self._daily_prayer_times: Dict[str, Dict[str, str]] = {}
         self._zone = zone
         self.hass = hass
-        self._store = Store(hass, self.STORAGE_VERSION, self.STORAGE_KEY.format(zone=zone))
+        self._store = Store(hass, self.STORAGE_VERSION, self.STORAGE_KEY)
 
     async def load_cached_data(self) -> None:
-        """Load cached prayer times from storage."""
+        """Load cached prayer times from storage, checking zone consistency."""
         cached_data = await self._store.async_load()
         if cached_data:
-            self._daily_prayer_times = cached_data.get("daily_prayer_times", {})
-            self._last_update_year = cached_data.get("last_update_year")
-            prayer_times_raw = cached_data.get("prayer_times", {})
-            self._prayer_times = {
-                prayer: [CalendarEvent(**event) for event in events]
-                for prayer, events in prayer_times_raw.items()
-            }
-            _LOGGER.debug("Loaded cached prayer times for zone %s", self._zone)
+            cached_zone = cached_data.get("zone")
+            if cached_zone != self._zone:
+                _LOGGER.warning("Cached prayer times zone (%s) does not match current zone (%s), clearing cache", cached_zone, self._zone)
+                self._daily_prayer_times = {}
+                self._prayer_times = {}
+                self._last_update_year = None
+            else:
+                self._daily_praver_times = cached_data.get("daily_prayer_times", {})
+                self._last_update_year = cached_data.get("last_update_year")
+                prayer_times_raw = cached_data.get("prayer_times", {})
+                self._prayer_times = {
+                    prayer: [CalendarEvent(**event) for event in events]
+                    for prayer, events in prayer_times_raw.items()
+                }
+                _LOGGER.debug("Loaded cached prayer times for zone %s", self._zone)
+        else:
+            _LOGGER.debug("No cached prayer times found")
 
     async def save_data(self) -> None:
-        """Save prayer times to persistent storage."""
+        """Save prayer times to persistent storage with zone code."""
         data = {
+            "zone": self._zone,  # Add zone code to JSON
             "daily_prayer_times": self._daily_prayer_times,
             "prayer_times": {
                 prayer: [{"summary": e.summary, "start": e.start.isoformat(), "end": e.end.isoformat()}

@@ -2,12 +2,15 @@
 from __future__ import annotations
 
 import voluptuous as vol
+import logging
 
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 
 from .const import DOMAIN, ZONES
+
+_LOGGER = logging.getLogger(__name__)
 
 class EsolatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for eSolat Takwim Malaysia."""
@@ -45,12 +48,8 @@ class EsolatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Create the options flow."""
         return OptionsFlowHandler(config_entry)
 
-class OptionsFlowHandler(config_entries.OptionsFlow):
+class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
     """Handle options flow for eSolat Takwim Malaysia."""
-
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize options flow."""
-        self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, str] | None = None
@@ -59,7 +58,13 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         errors = {}
 
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            new_zone = user_input["zone"]
+            _LOGGER.debug("Updating zone to %s", new_zone)
+            self.hass.config_entries.async_update_entry(
+                self.config_entry,
+                data={"zone": new_zone}
+            )
+            return self.async_create_entry(title="", data={})
 
         return self.async_show_form(
             step_id="init",
