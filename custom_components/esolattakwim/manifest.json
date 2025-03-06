@@ -4,9 +4,9 @@
   "codeowners": ["@zubir2k"],
   "config_flow": true,
   "documentation": "https://github.com/zubir2k/homeassistant-esolattakwim",
+  "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/zubir2k/homeassistant-esolattakwim/issues",
-  "platforms": ["calendar", "sensor"],
   "requirements": ["aiohttp>=3.8.0", "voluptuous>=0.13.1", "aiofiles>=23.2.1"],
   "version": "0.3.1"
 }
