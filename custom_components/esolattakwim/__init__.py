@@ -11,7 +11,7 @@ _LOGGER = logging.getLogger(__name__)
 
 from .const import DOMAIN
 
-PLATFORMS: list[Platform] = [Platform.CALENDAR]
+PLATFORMS: list[Platform] = [Platform.CALENDAR, Platform.SENSOR]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up eSolat Takwim Malaysia from a config entry."""

@@ -29,8 +29,10 @@ async def async_setup_entry(
 ) -> None:
     """Set up the eSolat Takwim Malaysia Calendar platform."""
     zone = config_entry.data["zone"]
-    calendar = EsolatCalendar(hass, zone, config_entry)
+    prayer_times = PrayerTimesData(zone, hass)
+    calendar = EsolatCalendar(hass, zone, config_entry, prayer_times)
     await calendar.load_cached_data()
+    hass.data[DOMAIN][config_entry.entry_id] = {"prayer_times": prayer_times}
     async_add_entities([calendar], True)
 
 class EsolatCalendar(CalendarEntity):
@@ -38,15 +40,15 @@ class EsolatCalendar(CalendarEntity):
     
     _attr_has_entity_name = True
     _attr_name = "eSolat Takwim"
-    _attr_unique_id = "esolat_takwim"  # Static unique_id
+    _attr_unique_id = "esolat_takwim"
 
-    def __init__(self, hass: HomeAssistant, zone: str, config_entry: ConfigEntry) -> None:
+    def __init__(self, hass: HomeAssistant, zone: str, config_entry: ConfigEntry, prayer_times: PrayerTimesData) -> None:
         """Initialize the calendar."""
         self.hass = hass
         self.zone = zone
         self._config_entry = config_entry
+        self._prayer_times = prayer_times
         self._islamic_events: list[CalendarEvent] = []
-        self._prayer_times = PrayerTimesData(zone, hass)
         self._attr_extra_state_attributes = {
             "hijri_date": None,
             "hijri_full": None,
@@ -77,7 +79,7 @@ class EsolatCalendar(CalendarEntity):
         self.zone = new_zone
         self._attr_extra_state_attributes["zone"] = new_zone
         self._prayer_times = PrayerTimesData(new_zone, self.hass)
-        # Fetch new data immediately instead of loading cache
+        hass.data[DOMAIN][self._config_entry.entry_id]["prayer_times"] = self._prayer_times
         async with aiohttp.ClientSession() as session:
             success = await self._prayer_times.fetch_prayer_times(session)
             if not success:
