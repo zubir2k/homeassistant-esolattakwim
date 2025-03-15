@@ -90,13 +90,28 @@ class EsolatCalendar(CalendarEntity):
         await self._prayer_times.load_cached_data()
         cached_events = await self._event_store.async_load()
         if cached_events:
-            self._islamic_events = [CalendarEvent(**event) for event in cached_events]
+            self._islamic_events = [
+                CalendarEvent(
+                    summary=event["summary"],
+                    start=datetime.fromisoformat(event["start"]) if isinstance(event["start"], str) else event["start"],
+                    end=datetime.fromisoformat(event["end"]) if isinstance(event["end"], str) else event["end"],
+                    description=event.get("description", "")
+                )
+                for event in cached_events
+            ]
             _LOGGER.debug("Loaded cached Islamic events")
 
     async def save_events(self) -> None:
         """Save Islamic events to persistent storage."""
-        events_data = [{"summary": e.summary, "start": e.start.isoformat(), "end": e.end.isoformat(), "description": e.description or ""}
-                       for e in self._islamic_events]
+        events_data = [
+            {
+                "summary": e.summary,
+                "start": e.start.isoformat(),
+                "end": e.end.isoformat(),
+                "description": e.description or ""
+            }
+            for e in self._islamic_events
+        ]
         await self._event_store.async_save(events_data)
         _LOGGER.debug("Saved Islamic events")
 
@@ -129,16 +144,19 @@ class EsolatCalendar(CalendarEntity):
         ]
 
     async def async_update(self) -> None:
-        """Update events and Hijri date."""
+        """Update events and Hijri date, falling back to local data if API fetch fails."""
         try:
             async with aiohttp.ClientSession() as session:
+                # Fetch prayer times, but use cached data if it fails
                 success = await self._prayer_times.fetch_prayer_times(session)
                 if not success and not self._prayer_times._daily_prayer_times:
-                    _LOGGER.warning("No prayer times available, using cached data if present")
-                
+                    _LOGGER.warning("No prayer times available in cache or API, calendar may be incomplete")
+                elif not success:
+                    _LOGGER.info("Using cached prayer times data")
+
+                # Always update attributes with whatever data we have
                 current_prayer, next_prayer, next_prayer_time = self._prayer_times.get_current_and_next_prayer()
                 prayer_times = self._prayer_times.get_prayer_times_utc()
-
                 self._attr_extra_state_attributes.update({
                     "current": current_prayer or "Unknown",
                     "next": next_prayer or "Unknown",
@@ -156,37 +174,37 @@ class EsolatCalendar(CalendarEntity):
                     self._attr_extra_state_attributes["hijri_date"] = hijri_date
                     self._attr_extra_state_attributes["hijri_full"] = hijri_full
 
+                # Attempt to fetch Islamic events, but keep cached data if it fails
                 async with session.get(ISLAMIC_EVENTS_API) as response:
                     if response.status != 200:
-                        _LOGGER.warning("Failed to fetch Islamic events, using cached data: %s", response.status)
-                        return
-
-                    data = await response.json()
-                    if data.get("status") != "OK!":
-                        _LOGGER.warning("Invalid response from eSolat API, using cached data")
-                        return
-
-                    events = []
-                    for event in data.get("event", []):
-                        try:
-                            date_str = f"{event['tarikh_miladi']} 00:00:00"
-                            naive_dt = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
-                            start = naive_dt.replace(tzinfo=TIMEZONE)
-                            end = start.replace(hour=23, minute=59, second=59)
-                            events.append(
-                                CalendarEvent(
-                                    summary=event["hari_peristiwa"].strip(),
-                                    start=start,
-                                    end=end,
-                                    description=event.get("tarikh_desc", ""),
-                                )
-                            )
-                        except (KeyError, ValueError) as err:
-                            _LOGGER.error("Error parsing event: %s", err)
-                            continue
-
-                    self._islamic_events = events
-                    await self.save_events()
+                        _LOGGER.warning("Failed to fetch Islamic events, HTTP %d: %s, using cached events", 
+                                      response.status, await response.text())
+                    else:
+                        data = await response.json()
+                        if data.get("status") != "OK!":
+                            _LOGGER.warning("Invalid response from eSolat API: %s, using cached events", data)
+                        else:
+                            events = []
+                            for event in data.get("event", []):
+                                try:
+                                    date_str = f"{event['tarikh_miladi']} 00:00:00"
+                                    naive_dt = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+                                    start = naive_dt.replace(tzinfo=TIMEZONE)
+                                    end = start.replace(hour=23, minute=59, second=59)
+                                    events.append(
+                                        CalendarEvent(
+                                            summary=event["hari_peristiwa"].strip(),
+                                            start=start,
+                                            end=end,
+                                            description=event.get("tarikh_desc", ""),
+                                        )
+                                    )
+                                except (KeyError, ValueError) as err:
+                                    _LOGGER.error("Error parsing event: %s", err)
+                                    continue
+                            self._islamic_events = events
+                            await self.save_events()
+                            _LOGGER.info("Successfully updated Islamic events from API")
 
         except (aiohttp.ClientError, asyncio.TimeoutError) as err:
-            _LOGGER.warning("Error updating calendar, using cached data: %s", err)
+            _LOGGER.warning("Network error during update, relying on cached data: %s", err)
