@@ -46,7 +46,14 @@ class PrayerTimesData:
                 self._last_update_year = cached_data.get("last_update_year")
                 prayer_times_raw = cached_data.get("prayer_times", {})
                 self._prayer_times = {
-                    prayer: [CalendarEvent(**event) for event in events]
+                    prayer: [
+                        CalendarEvent(
+                            summary=event["summary"],
+                            start=datetime.fromisoformat(event["start"]) if isinstance(event["start"], str) else event["start"],
+                            end=datetime.fromisoformat(event["end"]) if isinstance(event["end"], str) else event["end"]
+                        )
+                        for event in events
+                    ]
                     for prayer, events in prayer_times_raw.items()
                 }
                 _LOGGER.debug("Loaded cached prayer times for zone %s", self._zone)
@@ -171,15 +178,11 @@ class PrayerTimesData:
         return current_prayer, next_prayer, next_prayer_time
 
     async def fetch_prayer_times(self, session: aiohttp.ClientSession) -> bool:
-        """Fetch prayer times for the current year and store Hijri dates."""
+        """Fetch prayer times for the current year and store Hijri dates, falling back to local data if fetch fails."""
         current_year = dt.now(TIMEZONE).year
         current_month = dt.now(TIMEZONE).month
 
-        self._prayer_times.clear()
-
-        self._purge_old_prayer_times(current_year)
-
-        async def _fetch_yearly_prayer_times(year: int):
+        async def _fetch_yearly_prayer_times(year: int) -> bool:
             url = PRAYER_TIMES_API.format(zone=self._zone)
             start_date = datetime(year, 1, 1)
             end_date = datetime(year, 12, 31)
@@ -188,59 +191,75 @@ class PrayerTimesData:
             form_data.add_field('datestart', start_date.strftime('%Y-%m-%d'))
             form_data.add_field('dateend', end_date.strftime('%Y-%m-%d'))
 
-            async with session.post(url, data=form_data) as response:
-                if response.status != 200:
-                    _LOGGER.error("Failed to fetch prayer times for year %d", year)
-                    return False
+            try:
+                async with session.post(url, data=form_data) as response:
+                    if response.status != 200:
+                        _LOGGER.warning("Failed to fetch prayer times for year %d: HTTP %d - %s", 
+                                       year, response.status, await response.text())
+                        return False
 
-                data = await response.json()
-                if data.get("status") != "OK!":
-                    _LOGGER.error("Invalid response from eSolat Prayer Times API for year %d", year)
-                    return False
+                    data = await response.json()
+                    if data.get("status") != "OK!":
+                        _LOGGER.warning("Invalid response from eSolat Prayer Times API for year %d: %s", 
+                                       year, data)
+                        return False
 
-                for prayer_time in data.get("prayerTime", []):
-                    try:
-                        date_str = prayer_time["date"]
-                        hijri_date = prayer_time["hijri"]
-                        self._daily_prayer_times[date_str] = {
-                            "hijri": hijri_date,
-                            **{prayer: prayer_time[prayer] for prayer in PRAYER_NAMES if prayer in prayer_time},
-                        }
-                        for prayer, display_name in PRAYER_NAMES.items():
-                            if prayer in prayer_time:
-                                time_str = prayer_time[prayer]
-                                time_parts = time_str.split(":")
-                                if len(time_parts) >= 2:
-                                    hour = int(time_parts[0])
-                                    minute = int(time_parts[1])
-                                    date = datetime.strptime(date_str, "%d-%b-%Y").replace(tzinfo=TIMEZONE)
-                                    start = date.replace(hour=hour, minute=minute)
-                                    end_minute = (minute + 15) % 60
-                                    end_hour = hour + ((minute + 15) // 60)
-                                    end = date.replace(hour=end_hour, minute=end_minute)
+                    # If we have valid data, clear old prayer times and update
+                    self._prayer_times.clear()
+                    for prayer_time in data.get("prayerTime", []):
+                        try:
+                            date_str = prayer_time["date"]
+                            hijri_date = prayer_time["hijri"]
+                            self._daily_prayer_times[date_str] = {
+                                "hijri": hijri_date,
+                                **{prayer: prayer_time[prayer] for prayer in PRAYER_NAMES if prayer in prayer_time},
+                            }
+                            for prayer, display_name in PRAYER_NAMES.items():
+                                if prayer in prayer_time:
+                                    time_str = prayer_time[prayer]
+                                    time_parts = time_str.split(":")
+                                    if len(time_parts) >= 2:
+                                        hour = int(time_parts[0])
+                                        minute = int(time_parts[1])
+                                        date = datetime.strptime(date_str, "%d-%b-%Y").replace(tzinfo=TIMEZONE)
+                                        start = date.replace(hour=hour, minute=minute)
+                                        end_minute = (minute + 15) % 60
+                                        end_hour = hour + ((minute + 15) // 60)
+                                        end = date.replace(hour=end_hour, minute=end_minute)
 
-                                    event = CalendarEvent(
-                                        summary=f"{display_name}",
-                                        start=start,
-                                        end=end,
-                                    )
-                                    if prayer not in self._prayer_times:
-                                        self._prayer_times[prayer] = []
-                                    self._prayer_times[prayer].append(event)
-                    except (KeyError, ValueError) as err:
-                        _LOGGER.error("Error parsing prayer time: %s", err)
-                        continue
-            return True
+                                        event = CalendarEvent(
+                                            summary=f"{display_name}",
+                                            start=start,
+                                            end=end,
+                                        )
+                                        if prayer not in self._prayer_times:
+                                            self._prayer_times[prayer] = []
+                                        self._prayer_times[prayer].append(event)
+                        except (KeyError, ValueError) as err:
+                            _LOGGER.error("Error parsing prayer time: %s", err)
+                            continue
+                    return True
+            except aiohttp.ClientError as err:
+                _LOGGER.warning("Network error fetching prayer times for year %d: %s", year, err)
+                return False
+
+        # Purge old data before fetching, but only save if fetch succeeds
+        self._purge_old_prayer_times(current_year)
 
         success = await _fetch_yearly_prayer_times(current_year)
         if current_month == 12:
+            # Fetch next year’s data in December, purging will happen next year
             success &= await _fetch_yearly_prayer_times(current_year + 1)
 
         if success:
             self._last_update_year = current_year
             await self.save_data()
+            _LOGGER.info("Successfully fetched and updated prayer times for zone %s", self._zone)
+        else:
+            _LOGGER.info("API fetch failed, relying on existing local prayer times data for zone %s", self._zone)
 
-        return success
+        # Return True if we have any usable data (new or cached)
+        return bool(self._daily_prayer_times)
 
     def _purge_old_prayer_times(self, current_year: int) -> None:
         """Purge all prayer times before the current year."""
