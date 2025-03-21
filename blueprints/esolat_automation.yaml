@@ -3,7 +3,7 @@ blueprint:
   homeassistant:
     min_version: 2024.6.0
   description: >-
-    ## v1.2 - eSolat prayer time notifications with azan.
+    ## v1.3 - eSolat prayer time notifications with azan.
     
     This blueprint offers; 15 minutes reminder before Prayer time. Audio support for both Google and Alexa. 
     For Alexa users, please ensure that the Alexa Media Player integration has been installed and setup. For local audio (e.g. VLC audio), you may use Google as both share similar method for audio playback.
@@ -106,6 +106,17 @@ actions:
         'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{{
         prayer_map[state_attr(trigger.entity_id,'friendly_name')] }}
       prayertime: "{{ state_attr(trigger.entity_id,'time_12h') }}"
+      prayertts: >-
+        {% if prayer == "Subuh"
+        %}https://dl.sndup.net/j2nd/tts_subuh.mp3{% elif
+        prayer == "Zohor"
+        %}https://dl.sndup.net/bsc9/tts_zohor.mp3{% elif
+        prayer == "Asar"
+        %}https://dl.sndup.net/k5tc/tts_asar.mp3{% elif
+        prayer == "Maghrib"
+        %}https://dl.sndup.net/bfg5/tts_maghrib.mp3{% elif
+        prayer == "Isyak"
+        %}https://dl.sndup.net/m822/tts_isyak.mp3{% endif %}
       reminder: >-
         {{ ((as_timestamp(states(trigger.entity_id)) - now().timestamp()) // 60)
         | round(0) + 1 }}
@@ -262,8 +273,10 @@ actions:
                             type: tts
                           target: >-
                             {{ speaker_entity }}
-                          message: >-
-                            <audio src='{% if prayer == "Subuh" %}https://dl.sndup.net/rkrk/azansubuh_alexa.mp3{%
-                            else %}https://dl.sndup.net/c7sgg/azan_alexa.mp3{% endif %}'/>                        
+                          message: >-                           
+                            <audio src='{{ prayertts }}'/><audio src='{%if
+                            is_state("sensor.waktu_sekarang","Subuh")
+                            %}https://dl.sndup.net/rkrk/azansubuh_alexa.mp3{% else
+                            %}https://dl.sndup.net/c62p/azan_alexa.mp3{% endif %}'/>                            
                     alias: Alexa
 mode: single
