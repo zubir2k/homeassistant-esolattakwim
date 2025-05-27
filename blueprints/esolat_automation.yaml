@@ -3,7 +3,7 @@ blueprint:
   homeassistant:
     min_version: 2024.6.0
   description: >-
-    ## v1.3 - eSolat prayer time notifications with azan.
+    ## v1.4 - eSolat prayer time notifications with azan.
     
     This blueprint offers; 15 minutes reminder before Prayer time. Audio support for both Google and Alexa. 
     For Alexa users, please ensure that the Alexa Media Player integration has been installed and setup. For local audio (e.g. VLC audio), you may use Google as both share similar method for audio playback.
@@ -107,16 +107,16 @@ actions:
         prayer_map[state_attr(trigger.entity_id,'friendly_name')] }}
       prayertime: "{{ state_attr(trigger.entity_id,'time_12h') }}"
       prayertts: >-
-        {% if prayer == "Subuh"
-        %}https://dl.sndup.net/j2nd/tts_subuh.mp3{% elif
+        https://github.com/zubir2k/homeassistant-esolattakwim/raw/refs/heads/main/media/tts/{% if prayer == "Subuh"
+        %}tts_subuh.mp3{% elif
         prayer == "Zohor"
-        %}https://dl.sndup.net/bsc9/tts_zohor.mp3{% elif
+        %}tts_zohor.mp3{% elif
         prayer == "Asar"
-        %}https://dl.sndup.net/k5tc/tts_asar.mp3{% elif
+        %}tts_asar.mp3{% elif
         prayer == "Maghrib"
-        %}https://dl.sndup.net/bfg5/tts_maghrib.mp3{% elif
+        %}tts_maghrib.mp3{% elif
         prayer == "Isyak"
-        %}https://dl.sndup.net/m822/tts_isyak.mp3{% endif %}
+        %}tts_isyak.mp3{% endif %}
       reminder: >-
         {{ ((as_timestamp(states(trigger.entity_id)) - now().timestamp()) // 60)
         | round(0) + 1 }}
@@ -234,6 +234,18 @@ actions:
                             Audio Azan {{ audio_azan }}{{ '\n' }} Audio Azan
                             Subuh {{ audio_azansubuh }}
                         alias: DEBUG
+                      - action: media_player.play_media
+                        enabled: true                 
+                        target:
+                          entity_id: "{{ speaker_entity }}"
+                        data:
+                          media_content_type: audio/mp3
+                          media_content_id: >-
+                            {{ prayertts }}
+                          extra:
+                            title: Azan {{ prayer }}
+                            thumb: https://i.imgur.com/1U9Ehvr.png      
+                      - delay: "00:00:10"
                       - action: media_player.play_media
                         enabled: true                 
                         target:
