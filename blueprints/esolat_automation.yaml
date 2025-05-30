@@ -3,10 +3,11 @@ blueprint:
   homeassistant:
     min_version: 2024.6.0
   description: >-
-    ## v1.4 - eSolat prayer time notifications with azan.
+    ## v1.5 - eSolat prayer time notifications with azan.
     
-    This blueprint offers; 15 minutes reminder before Prayer time. Audio support for both Google and Alexa. 
+    This blueprint offers; 15 minutes reminder before Prayer time. Mobile and Audio notification support for both Google and Alexa. 
     For Alexa users, please ensure that the Alexa Media Player integration has been installed and setup. For local audio (e.g. VLC audio), you may use Google as both share similar method for audio playback.
+    Miscellaneous audio comprises of takbir during Eid and morning supplication dua (currently available only on Google due to audio format not optimized for Alexa).
   author: zubir2k
   domain: automation
   input:
@@ -45,13 +46,13 @@ blueprint:
       description: URL of your preferred azan audio file.
       selector:
         text: {}
-      default: https://github.com/zubir2k/HomeAssistantAdzan/raw/refs/heads/main/audio/azan_alexa.mp3
+      default: https://github.com/zubir2k/homeassistant-esolattakwim/raw/refs/heads/main/media/azan/azan_alexa.mp3
     txt_audio_azansubuh:
       name: Azan Subuh
       description: URL of your preferred azan audio file.
       selector:
         text: {}
-      default: https://github.com/zubir2k/HomeAssistantAdzan/raw/refs/heads/main/audio/azansubuh_alexa.mp3
+      default: https://github.com/zubir2k/homeassistant-esolattakwim/raw/refs/heads/main/media/azan/azansubuh_alexa.mp3
     chk_notification_options:
       name: Notification Options
       description: Select notification types to use.
@@ -62,6 +63,7 @@ blueprint:
           options:
           - Mobile Notification
           - Audio Notification
+          - Miscellaneous Audio
           custom_value: false
           sort: false
   source_url: https://github.com/zubir2k/homeassistant-esolattakwim/blob/main/blueprints/esolat_automation.yaml
@@ -98,6 +100,11 @@ triggers:
         offset: "-00:15:00"
       - entity_id: sensor.esolat_takwim_isha
         offset: "-00:15:00"
+  - trigger: state
+    id: esolat_doapagi
+    entity_id:
+      - sun.sun
+    to: above_horizon        
 conditions: []
 actions:
   - variables:
@@ -122,6 +129,55 @@ actions:
         | round(0) + 1 }}
     alias: Variables
   - choose:
+      - conditions:
+          - condition: trigger
+            id:
+              - esolat_doapagi
+        sequence:
+          - alias: Doa Pagi
+            choose:
+              - conditions:
+                  - condition: template
+                    value_template: >-
+                      {{ "Miscellaneous Audio" in notification_options }}  
+                sequence:
+                  - action: media_player.play_media
+                    target:
+                      entity_id: "{{ speaker_entity }}"
+                    data:
+                      media_content_id: https://github.com/zubir2k/homeassistant-esolattakwim/raw/refs/heads/main/media/misc/doa-pagi.mp3
+                      media_content_type: audio/mp3
+                      extra:
+                        title: Doa Pagi
+                        thumb: https://i.imgur.com/obn3vGB.png
+                  - delay: "00:02:53"
+                  - action: media_player.play_media
+                    target:
+                      entity_id: "{{ speaker_entity }}"
+                    data:
+                      media_content_id: https://github.com/zubir2k/homeassistant-esolattakwim/raw/refs/heads/main/media/misc/doa-dhuha.mp3
+                      media_content_type: audio/mp3
+                      extra:
+                        title: Doa Dhuha
+                        thumb: https://i.imgur.com/obn3vGB.png   
+                  - delay: "00:02:30"
+                  - choose:
+                      - conditions:
+                          - condition: template
+                            value_template: >-
+                              {% set raya = (state_attr('calendar.esolat_takwim','hijri_date')[8:10] ~ '-' ~
+                              state_attr('calendar.esolat_takwim','hijri_date')[5:7]) %}
+                              {{ raya == '01-10' or raya == '10-12' }}
+                        sequence:
+                          - action: media_player.play_media
+                            target:
+                              entity_id: "{{ speaker_entity }}"
+                            data:
+                              media_content_id: https://github.com/zubir2k/homeassistant-esolattakwim/raw/refs/heads/main/media/misc/takbir.mp3
+                              media_content_type: audio/mp3
+                              extra:
+                                title: Takbir Raya {{ state_attr('calendar.esolat_takwim','hijri_date')[0:4] ~ 'h' }}
+                                thumb: https://i.imgur.com/obn3vGB.png   
       - conditions:
           - condition: trigger
             id:
@@ -257,7 +313,28 @@ actions:
                             }}{% else  %}{{ audio_azan }}{% endif %}
                           extra:
                             title: Azan {{ prayer }}
-                            thumb: https://i.imgur.com/1U9Ehvr.png                        
+                            thumb: https://i.imgur.com/1U9Ehvr.png              
+                      - delay: "00:03:40"
+                      - choose:
+                          - conditions:
+                              - condition: template
+                                value_template: >-
+                                  {% set day = state_attr('calendar.esolat_takwim','hijri_date')[8:10] %}
+                                  {% set month = state_attr('calendar.esolat_takwim','hijri_date')[5:7] %}
+                                  {% set tasyrik_end = not state_attr('calendar.esolat_takwim','current') in ['Maghrib','Isyak'] %}
+                                  {{ "Miscellaneous Audio" in notification_options and speaker_type == "Google" and 
+                                  ((month == '12' and day > '08' and day < '14' or (day == '13' and month == '12' and not tasyrik_end))
+                                  or (month == '09' and day == '29' and not tasyrik_end) or (month == '09' and day == '30' and not tasyrik_end)) }}
+                            sequence: 
+                              - action: media_player.play_media
+                                data:
+                                  media_content_type: audio/mp3
+                                  media_content_id: https://github.com/zubir2k/homeassistant-esolattakwim/raw/refs/heads/main/media/misc/takbir.mp3
+                                  extra:
+                                    title: Takbir Raya {{ state_attr('calendar.esolat_takwim','hijri_date')[0:4] ~ 'h' }}
+                                    thumb: https://i.imgur.com/obn3vGB.png
+                                target:
+                                  entity_id: "{{ speaker_entity }}"
                     alias: Google
                   - conditions:
                       - condition: template
@@ -286,9 +363,7 @@ actions:
                           target: >-
                             {{ speaker_entity }}
                           message: >-                           
-                            <audio src='{{ prayertts }}'/><audio src='{%if
-                            is_state("sensor.waktu_sekarang","Subuh")
-                            %}https://dl.sndup.net/rkrk/azansubuh_alexa.mp3{% else
-                            %}https://dl.sndup.net/c62p/azan_alexa.mp3{% endif %}'/>                            
+                            <audio src='{{ prayertts }}'/><audio src='{% if prayer == "Subuh"  %}{{ audio_azansubuh
+                            }}{% else  %}{{ audio_azan }}{% endif %}'/>                            
                     alias: Alexa
 mode: single
