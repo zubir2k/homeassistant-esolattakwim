@@ -3,7 +3,7 @@ blueprint:
   homeassistant:
     min_version: 2024.6.0
   description: >-
-    ## v1.5 - eSolat prayer time notifications with azan.
+    ## v1.5.1 - eSolat prayer time notifications with azan.
     
     This blueprint offers; 15 minutes reminder before Prayer time. Mobile and Audio notification support for both Google and Alexa. 
     For Alexa users, please ensure that the Alexa Media Player integration has been installed and setup. For local audio (e.g. VLC audio), you may use Google as both share similar method for audio playback.
@@ -109,10 +109,11 @@ conditions: []
 actions:
   - variables:
       prayer: >-
-        {% set prayer_map = {'Imsak':'Imsak', 'Fajr':'Subuh', 'Syuruk':'Syuruk',
+        {% if not trigger.id == 'esolat_doapagi' %}{% set prayer_map = {'Imsak':'Imsak', 'Fajr':'Subuh', 'Syuruk':'Syuruk',
         'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{{
-        prayer_map[state_attr(trigger.entity_id,'friendly_name')] }}
-      prayertime: "{{ state_attr(trigger.entity_id,'time_12h') }}"
+        prayer_map[state_attr(trigger.entity_id,'friendly_name')] }}{% endif %}
+      prayertime: >-
+        {% if not trigger.id == 'esolat_doapagi' %}{{ state_attr(trigger.entity_id,'time_12h') }}{% endif %}
       prayertts: >-
         https://github.com/zubir2k/homeassistant-esolattakwim/raw/refs/heads/main/media/tts/{% if prayer == "Subuh"
         %}tts_subuh.mp3{% elif
@@ -123,10 +124,10 @@ actions:
         prayer == "Maghrib"
         %}tts_maghrib.mp3{% elif
         prayer == "Isyak"
-        %}tts_isyak.mp3{% endif %}
+        %}tts_isyak.mp3{% else %}{% endif %}
       reminder: >-
-        {{ ((as_timestamp(states(trigger.entity_id)) - now().timestamp()) // 60)
-        | round(0) + 1 }}
+        {% if not trigger.id == 'esolat_doapagi' %}{{ ((as_timestamp(states(trigger.entity_id)) - now().timestamp()) // 60)
+        | round(0) + 1 }}{% endif %}
     alias: Variables
   - choose:
       - conditions:
