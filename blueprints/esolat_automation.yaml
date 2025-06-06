@@ -3,7 +3,7 @@ blueprint:
   homeassistant:
     min_version: 2024.6.0
   description: >-
-    ## v1.5.1 - eSolat prayer time notifications with azan.
+    ## v1.5.2 - eSolat prayer time notifications with azan.
     
     This blueprint offers; 15 minutes reminder before Prayer time. Mobile and Audio notification support for both Google and Alexa. 
     For Alexa users, please ensure that the Alexa Media Player integration has been installed and setup. For local audio (e.g. VLC audio), you may use Google as both share similar method for audio playback.
@@ -166,9 +166,8 @@ actions:
                       - conditions:
                           - condition: template
                             value_template: >-
-                              {% set raya = (state_attr('calendar.esolat_takwim','hijri_date')[8:10] ~ '-' ~
-                              state_attr('calendar.esolat_takwim','hijri_date')[5:7]) %}
-                              {{ raya == '01-10' or raya == '10-12' }}
+                              {% set raya = state_attr('calendar.esolat_takwim','hijri_date')[8:10] ~ '-' ~ state_attr('calendar.esolat_takwim','hijri_date')[5:7] %}
+                              {{ raya in ['01-10', '10-12'] }}
                         sequence:
                           - action: media_player.play_media
                             target:
@@ -322,10 +321,10 @@ actions:
                                 value_template: >-
                                   {% set day = state_attr('calendar.esolat_takwim','hijri_date')[8:10] %}
                                   {% set month = state_attr('calendar.esolat_takwim','hijri_date')[5:7] %}
-                                  {% set tasyrik_end = not state_attr('calendar.esolat_takwim','current') in ['Maghrib','Isyak'] %}
-                                  {{ "Miscellaneous Audio" in notification_options and speaker_type == "Google" and 
-                                  ((month == '12' and day > '08' and day < '14' or (day == '13' and month == '12' and not tasyrik_end))
-                                  or (month == '09' and day == '29' and not tasyrik_end) or (month == '09' and day == '30' and not tasyrik_end)) }}
+                                  {% set time_now = state_attr('calendar.esolat_takwim','current') %}
+                                  {{ "Miscellaneous Audio" in notification_options and speaker_type == "Google" and (
+                                  ((month == '12' and day >= '09' and day <= '13' and time_now in ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha']) or 
+                                  (month == '09' and day == '29' and time_now in ['Maghrib', 'Isha']))) }}                                  
                             sequence: 
                               - action: media_player.play_media
                                 data:
