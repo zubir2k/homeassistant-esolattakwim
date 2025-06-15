@@ -3,11 +3,11 @@ blueprint:
   homeassistant:
     min_version: 2024.6.0
   description: >-
-    ## v1.5.2 - eSolat prayer time notifications with azan.
+    ## v1.5.3 - eSolat prayer time notifications with azan.
     
     This blueprint offers; 15 minutes reminder before Prayer time. Mobile and Audio notification support for both Google and Alexa. 
     For Alexa users, please ensure that the Alexa Media Player integration has been installed and setup. For local audio (e.g. VLC audio), you may use Google as both share similar method for audio playback.
-    Miscellaneous audio comprises of takbir during Eid and morning supplication dua (currently available only on Google due to audio format not optimized for Alexa).
+    Miscellaneous audio comprises of takbir during Eid and morning supplication dua (currently available only on Google due to audio format not optimized for Alexa). Multiple selection of speakers is now available (However, it is still recommended to use speaker group for Google).
   author: zubir2k
   domain: automation
   input:
@@ -40,7 +40,7 @@ blueprint:
         entity:
           domain:
           - media_player
-          multiple: false
+          multiple: true
     txt_audio_azan:
       name: Azan
       description: URL of your preferred azan audio file.
