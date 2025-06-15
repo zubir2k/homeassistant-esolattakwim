@@ -1,6 +1,6 @@
 ## 🕋 Prayer Time Markdown Card
 
-![image](https://github.com/user-attachments/assets/73dd0218-0adb-4ac6-92d3-2226a2072d51)
+![image](https://github.com/user-attachments/assets/4baee4b0-c824-43eb-8b4f-7d403a9b043b)
 
 1. Edit your current dashboard.
 2. Add a new Markdown card. [What is Markdown card?](https://www.home-assistant.io/dashboards/markdown)
@@ -8,8 +8,8 @@
 4. Save
 
 ```markdown
-> Today is</b><br /><font size=7>{{ now().strftime('%I:%M %p') }}<br />{{ now().strftime('%A') }}</font>
-<font size=2>{{ now().strftime('%d %B %Y') }} | {{ state_attr('calendar.esolat_takwim','hijri_full') }}H</font>
+> Today is {{ now().strftime('%A') }}<br /><font size=7>{{ now().strftime('%-I:%M %p') }}</font><br />{{ now().strftime('%d %B %Y') }} | {{ states('sensor.esolat_takwim_hijri') }}H
+
 <table align=center width=100%>
 <tr align=center>
 <td>Subuh</td>
