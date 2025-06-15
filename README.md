@@ -53,7 +53,7 @@ May this be beneficial to all, InshaAllah
 I have prepared a markdown card template for this integration.
 You may refer to the [Markdown.md](MARKDOWN.md) and copy the markdown codes.
 
-![image](https://github.com/user-attachments/assets/73dd0218-0adb-4ac6-92d3-2226a2072d51)
+![image](https://github.com/user-attachments/assets/4baee4b0-c824-43eb-8b4f-7d403a9b043b)
 
 ## Automation Azan Blueprint
 I have prepared the automation in Blueprint format. Suggestions are welcome. 
