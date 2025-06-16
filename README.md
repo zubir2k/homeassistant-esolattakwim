@@ -1,5 +1,6 @@
 ![github](https://github.com/user-attachments/assets/2e1c97c0-6b48-4953-8a32-38f1e9a4d052)
 
+![GitHub Repo stars](https://img.shields.io/github/stars/zubir2k/homeassistant-esolattakwim?style=social)
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/default)
 [![hacs_badge](https://img.shields.io/badge/HACS-Integration-41BDF5.svg)](https://github.com/hacs/integration)
 ![GitHub all releases](https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=Download%20Count&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.esolattakwim.total)
