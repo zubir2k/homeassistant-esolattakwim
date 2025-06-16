@@ -1,5 +1,6 @@
 ![github](https://github.com/user-attachments/assets/2e1c97c0-6b48-4953-8a32-38f1e9a4d052)
 
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
 [![hacs_badge](https://img.shields.io/badge/HACS-Integration-41BDF5.svg)](https://github.com/hacs/integration)
 ![GitHub all releases](https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=Download%20Count&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.esolattakwim.total)
 [![Buy](https://img.shields.io/badge/Belanja-Coffee-yellow.svg)](https://zubirco.de/buymecoffee)
@@ -56,15 +57,24 @@ You may refer to the [Markdown.md](MARKDOWN.md) and copy the markdown codes.
 ![image](https://github.com/user-attachments/assets/4baee4b0-c824-43eb-8b4f-7d403a9b043b)
 
 ## Automation Azan Blueprint
-I have prepared the automation in Blueprint format. Suggestions are welcome. \
-**Current version: 1.5.4**
+Features:
+- Speaker selection
+  - Choose either `Google` or `Alexa`
+- Mobile Notification
+  - Push notification for 15min reminder and during prayer time
+- Audio Notification
+  - Audio playback based on speaker selection
+  - Custom audio for adhan (except for audio announcement that are currently fixed).
+- Miscellaneous Audio
+  - Morning supplication dua'
+  - Takbir during Eidul Fitr and Eidul Adha
 
 > [!Caution]
 > **Important Note:** \
-> Due to limitation on the Alexa media playback, I had to make the audio permanent and could not be changed \
-> (both announcement and adhan itself). Only apply to Alexa speaker.
+> Due to some limitation on the Alexa media playback, I had to make the audio permanent and could not be changed \
+> (both announcement and adhan itself). Only applicable to Alexa speaker 🔊
 
 [![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fzubir2k%2Fhomeassistant-esolattakwim%2Fblob%2Fmain%2Fblueprints%2Fesolat_automation.yaml)
 
 ## Disclaimer/Credits
-Data provided by JAKIM (Department of Islamic Development Malaysia)
+Takwim and prayer time data are provided by JAKIM (Department of Islamic Development Malaysia)
