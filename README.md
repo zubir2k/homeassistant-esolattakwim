@@ -16,14 +16,14 @@ May this be beneficial to all, InshaAllah
 ![image](https://github.com/user-attachments/assets/f6f2009b-b187-4d3b-905d-7e4b5dc16b1b)
 
 
-## Features
+## 🚩 Features
 - Automatic prayer time retrieval from JAKIM (and stored locally)
 - Takwim/Calendar information from JAKIM
 - Prayer time information available as attributes in the calendar entity
 - Prayer time format in Datetime UTC (e.g. 2023-07-29T22:01:00+00:00)
 - `current` and `next` prayer time indicator available as attribute
 
-## Installation
+## 🕹️ Installation
 #### With HACS
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=zubir2k&repository=homeassistant-esolattakwim&category=integration)
 
@@ -38,7 +38,7 @@ May this be beneficial to all, InshaAllah
 > [!WARNING]
 > If installing manually, in order to be alerted about new releases, you will need to subscribe to releases from this repository.
 
-## Setup
+## 📦 Setup
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=esolattakwim)
 
 > [!Tip]
@@ -50,13 +50,15 @@ May this be beneficial to all, InshaAllah
 
 ![image](https://github.com/user-attachments/assets/7071de5a-1d22-4f89-9162-02fc1b5a782e)
 
-## Prayer Time Markdown Card
+## 🪄 Prayer Time Markdown Card
 I have prepared a markdown card template for this integration.
 You may refer to the [Markdown.md](MARKDOWN.md) and copy the markdown codes.
 
 ![image](https://github.com/user-attachments/assets/4baee4b0-c824-43eb-8b4f-7d403a9b043b)
 
-## Automation Azan Blueprint
+## 🪄 Automation Azan Blueprint
+[![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fzubir2k%2Fhomeassistant-esolattakwim%2Fblob%2Fmain%2Fblueprints%2Fesolat_automation.yaml)
+
 Features:
 - Speaker selection
   - Choose either `Google` or `Alexa`
@@ -74,7 +76,8 @@ Features:
 > Due to some limitation on the Alexa media playback, I had to make the audio permanent and could not be changed \
 > (both announcement and adhan itself). Only applicable to Alexa speaker 🔊
 
-[![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fzubir2k%2Fhomeassistant-esolattakwim%2Fblob%2Fmain%2Fblueprints%2Fesolat_automation.yaml)
+## 🎖️ Disclaimer/Credits
+Takwim and prayer time data are provided by [e-solat](https://www.e-solat.gov.my/) JAKIM (Department of Islamic Development Malaysia)
 
-## Disclaimer/Credits
-Takwim and prayer time data are provided by JAKIM (Department of Islamic Development Malaysia)
+## 📢 Join the Community
+[Home Assistant Malaysia](https://www.facebook.com/groups/homeassistantmalaysia)
