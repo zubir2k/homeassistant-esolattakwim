@@ -73,7 +73,7 @@ Features:
 
 > [!Caution]
 > **Important Note:** \
-> Due to some limitation on the Alexa media playback, I had to make the audio permanent and could not be changed \
+> Due to some limitation on the Alexa media playback, I had to make the audio permanent and could not be changed 
 > (both announcement and adhan itself). Only applicable to Alexa speaker 🔊
 
 ## 🎖️ Disclaimer/Credits
