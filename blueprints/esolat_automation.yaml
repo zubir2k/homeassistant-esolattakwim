@@ -3,7 +3,7 @@ blueprint:
   homeassistant:
     min_version: 2024.6.0
   description: >-
-    ## v1.5.3 - eSolat prayer time notifications with azan.
+    ## v1.5.4 - eSolat prayer time notifications with azan.
     
     This blueprint offers; 15 minutes reminder before Prayer time. Mobile and Audio notification support for both Google and Alexa. 
     For Alexa users, please ensure that the Alexa Media Player integration has been installed and setup. For local audio (e.g. VLC audio), you may use Google as both share similar method for audio playback.
@@ -114,7 +114,18 @@ actions:
         prayer_map[state_attr(trigger.entity_id,'friendly_name')] }}{% endif %}
       prayertime: >-
         {% if not trigger.id == 'esolat_doapagi' %}{{ state_attr(trigger.entity_id,'time_12h') }}{% endif %}
+      prayeraudio: >-
+        {% if speaker_type == "Google" %}
+        {% if prayer == "Subuh"
+        %}{{ audio_azansubuh }}{% else
+        %}{{ audio_azan }}{% endif %}
+        {% elif speaker_type == "Alexa" %}
+        {% if prayer == "Subuh"
+        %}https://dl.sndup.net/rkrk/azansubuh_alexa.mp3{% else 
+        %}https://dl.sndup.net/c62p/azan_alexa.mp3{% endif %}
+        {% endif %}
       prayertts: >-
+        {% if speaker_type == "Google" %}
         https://github.com/zubir2k/homeassistant-esolattakwim/raw/refs/heads/main/media/tts/{% if prayer == "Subuh"
         %}tts_subuh.mp3{% elif
         prayer == "Zohor"
@@ -124,7 +135,19 @@ actions:
         prayer == "Maghrib"
         %}tts_maghrib.mp3{% elif
         prayer == "Isyak"
-        %}tts_isyak.mp3{% else %}{% endif %}
+        %}tts_isyak.mp3{% endif %}
+        {% elif speaker_type == "Alexa" %}
+        {% if prayer == "Subuh"
+        %}https://dl.sndup.net/j2nd/tts_subuh.mp3{% elif
+        prayer == "Zohor"
+        %}https://dl.sndup.net/bsc9/tts_zohor.mp3{% elif
+        prayer == "Asar"
+        %}https://dl.sndup.net/k5tc/tts_asar.mp3{% elif
+        prayer == "Maghrib"
+        %}https://dl.sndup.net/bfg5/tts_maghrib.mp3{% elif
+        prayer == "Isyak"
+        %}https://dl.sndup.net/m822/tts_isyak.mp3{% endif %}
+        {% endif %}
       reminder: >-
         {% if not trigger.id == 'esolat_doapagi' %}{{ ((as_timestamp(states(trigger.entity_id)) - now().timestamp()) // 60)
         | round(0) + 1 }}{% endif %}
@@ -309,8 +332,7 @@ actions:
                         data:
                           media_content_type: audio/mp3
                           media_content_id: >-
-                            {% if prayer == "Subuh"  %}{{ audio_azansubuh
-                            }}{% else  %}{{ audio_azan }}{% endif %}
+                            {{ prayeraudio }}
                           extra:
                             title: Azan {{ prayer }}
                             thumb: https://i.imgur.com/1U9Ehvr.png              
@@ -363,7 +385,6 @@ actions:
                           target: >-
                             {{ speaker_entity }}
                           message: >-                           
-                            <audio src='{{ prayertts }}'/><audio src='{% if prayer == "Subuh"  %}{{ audio_azansubuh
-                            }}{% else  %}{{ audio_azan }}{% endif %}'/>                            
+                            <audio src='{{ prayertts }}'/><audio src='{{ prayeraudio }}'/>                            
                     alias: Alexa
 mode: single
