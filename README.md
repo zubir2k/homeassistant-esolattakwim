@@ -56,7 +56,13 @@ You may refer to the [Markdown.md](MARKDOWN.md) and copy the markdown codes.
 ![image](https://github.com/user-attachments/assets/4baee4b0-c824-43eb-8b4f-7d403a9b043b)
 
 ## Automation Azan Blueprint
-I have prepared the automation in Blueprint format. Suggestions are welcome. 
+I have prepared the automation in Blueprint format. Suggestions are welcome. \
+**Current version: 1.5.4**
+
+> [!Caution]
+> **Important Note:** \
+> Due to limitation on the Alexa media playback, I had to make the audio permanent and could not be changed \
+> (both announcement and adhan itself). Only apply to Alexa speaker.
 
 [![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fzubir2k%2Fhomeassistant-esolattakwim%2Fblob%2Fmain%2Fblueprints%2Fesolat_automation.yaml)
 
