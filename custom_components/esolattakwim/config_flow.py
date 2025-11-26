@@ -7,10 +7,21 @@ import logging
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers.selector import (
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+    SelectOptionDict,
+)
 
 from .const import DOMAIN, ZONES
 
 _LOGGER = logging.getLogger(__name__)
+
+ZONE_OPTIONS = [
+    SelectOptionDict(value=key, label=value) for key, value in ZONES.items()
+]
+
 
 class EsolatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for eSolat Takwim Malaysia."""
@@ -35,7 +46,12 @@ class EsolatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
-                vol.Required("zone", default="sgr01"): vol.In(ZONES)
+                vol.Required("zone", default="sgr01"): SelectSelector(
+                    SelectSelectorConfig(
+                        options=ZONE_OPTIONS,
+                        mode=SelectSelectorMode.DROPDOWN,
+                    )
+                )
             }),
             errors=errors,
         )
@@ -47,6 +63,7 @@ class EsolatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> config_entries.OptionsFlow:
         """Create the options flow."""
         return OptionsFlowHandler(config_entry)
+
 
 class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
     """Handle options flow for eSolat Takwim Malaysia."""
@@ -72,7 +89,12 @@ class OptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
                 vol.Required(
                     "zone",
                     default=self.config_entry.data.get("zone", "sgr01")
-                ): vol.In(ZONES)
+                ): SelectSelector(
+                    SelectSelectorConfig(
+                        options=ZONE_OPTIONS,
+                        mode=SelectSelectorMode.DROPDOWN,
+                    )
+                )
             }),
             errors=errors,
         )
