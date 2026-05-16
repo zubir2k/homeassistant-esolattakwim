@@ -14,7 +14,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt
 from homeassistant.helpers.storage import Store
 
-from .const import DOMAIN, ISLAMIC_EVENTS_API, TIMEZONE, HIJRI_MONTHS, PRAYER_TIMES_API
+from .const import DOMAIN, ISLAMIC_EVENTS_API, TIMEZONE, HIJRI_MONTHS, PRAYER_TIMES_API, get_device_info
 from .prayer_times import PrayerTimesData
 
 _LOGGER = logging.getLogger(__name__)
@@ -208,3 +208,8 @@ class EsolatCalendar(CalendarEntity):
 
         except (aiohttp.ClientError, asyncio.TimeoutError) as err:
             _LOGGER.warning("Network error during update, relying on cached data: %s", err)
+
+    @property
+    def device_info(self):
+        return get_device_info(self.zone)
+    

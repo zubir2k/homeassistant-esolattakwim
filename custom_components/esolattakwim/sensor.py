@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, TIMEZONE, HIJRI_MONTHS
+from .const import DOMAIN, TIMEZONE, HIJRI_MONTHS, get_device_info
 from .prayer_times import PrayerTimesData
 
 _LOGGER = logging.getLogger(__name__)
@@ -61,7 +61,7 @@ class PrayerTimeSensor(SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the state attributes."""
         return self._attributes
-
+    
     async def async_update(self) -> None:
         """Update the sensor state and attributes."""
         prayer_times = self._prayer_times.get_prayer_times_utc()
@@ -75,6 +75,9 @@ class PrayerTimeSensor(SensorEntity):
             }
         else:
             self._attributes = {"time_12h": "Unknown", "time_24h": "Unknown"}
+    @property
+    def device_info(self):
+        return get_device_info(self._prayer_times._zone)
 
 class HijriSensor(SensorEntity):
     """Representation of a Hijri date sensor."""
@@ -104,7 +107,7 @@ class HijriSensor(SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the state attributes."""
         return self._attributes
-
+    
     async def async_update(self) -> None:
         """Update the sensor state and attributes."""
         today_date = dt_util.now(TIMEZONE).strftime("%d-%b-%Y")
@@ -119,3 +122,8 @@ class HijriSensor(SensorEntity):
         else:
             self._state = "Unknown"
             self._attributes = {"date": "Unknown"}
+            
+    @property
+    def device_info(self):
+        return get_device_info(self._prayer_times._zone)
+    
