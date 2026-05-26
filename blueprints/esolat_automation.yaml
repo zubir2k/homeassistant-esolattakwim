@@ -3,13 +3,14 @@ blueprint:
   homeassistant:
     min_version: 2024.6.0
   description: >-
-    ## v1.5.5 - eSolat prayer time notifications with azan.
+    ## v1.5.6 - eSolat prayer time notifications with azan.
     
     This blueprint offers; 15 minutes reminder before Prayer time. Mobile and Audio notification support for both Google and Alexa. 
     For Alexa users, please ensure that the Alexa Media Player integration has been installed and setup. For local audio (e.g. VLC audio), you may use Google as both share similar method for audio playback.
     Miscellaneous audio comprises of takbir during Eid and morning supplication dua (currently available only on Google due to audio format not optimized for Alexa). Multiple selection of speakers is now available (However, it is still recommended to use speaker group for Google).
   author: zubir2k
   domain: automation
+  source_url: https://github.com/zubir2k/homeassistant-esolattakwim/blob/main/blueprints/esolat_automation.yaml
   input:
     select_esolattakwim:
       name: eSolat Calendar Entity
@@ -21,6 +22,19 @@ blueprint:
           - calendar
           integration: esolattakwim
           multiple: false
+    chk_notification_options:
+      name: Notification Options
+      description: Select notification types to use.
+      default: Persistent Notification
+      selector:
+        select:
+          multiple: true
+          options:
+          - Mobile Notification
+          - Audio Notification
+          - Miscellaneous Audio
+          custom_value: false
+          sort: false
     select_speaker_type:
       name: Speaker Type
       description: Type of speaker to use for the alert (Google or Alexa).
@@ -35,12 +49,22 @@ blueprint:
           sort: false
     select_speaker_entity:
       name: Speaker Entity
-      description: The media player entity for the speaker.
+      description: The media player entity for the speaker. Multiple devices may be used. 
       selector:
         entity:
           domain:
           - media_player
           multiple: true
+    select_mobiledevice:
+      name: Mobile Device
+      description: The devices to send the notification to. Only works with Home Assistant mobile app. Multiple devices may be used. 
+      default: []
+      selector:
+        entity:
+          multiple: true
+          filter:
+            - integration: mobile_app
+              domain: notify          
     txt_audio_azan:
       name: Azan
       description: URL of your preferred azan audio file.
@@ -53,28 +77,20 @@ blueprint:
       selector:
         text: {}
       default: https://github.com/zubir2k/homeassistant-esolattakwim/raw/refs/heads/main/media/azan/azansubuh_alexa.mp3
-    chk_notification_options:
-      name: Notification Options
-      description: Select notification types to use.
-      default: Persistent Notification
-      selector:
-        select:
-          multiple: true
-          options:
-          - Mobile Notification
-          - Audio Notification
-          - Miscellaneous Audio
-          custom_value: false
-          sort: false
-  source_url: https://github.com/zubir2k/homeassistant-esolattakwim/blob/main/blueprints/esolat_automation.yaml
 variables:
   esolattakwim: !input select_esolattakwim
   speaker_type: !input select_speaker_type
   speaker_entity: !input select_speaker_entity
+  mobiledevice: !input select_mobiledevice
   audio_azan: !input txt_audio_azan
   audio_azansubuh: !input txt_audio_azansubuh
   notification_options: !input chk_notification_options
 triggers:
+  - trigger: event
+    alias: Debug
+    id: esolat_debug
+    event_type: ""
+    context: {}
   - trigger: time
     alias: eSolat Time
     id: esolat_time
@@ -109,9 +125,10 @@ conditions: []
 actions:
   - variables:
       prayer: >-
-        {% if not trigger.id == 'esolat_doapagi' %}{% set prayer_map = {'Imsak':'Imsak', 'Fajr':'Subuh', 'Syuruk':'Syuruk',
-        'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}{{
-        prayer_map[state_attr(trigger.entity_id,'friendly_name')] }}{% endif %}
+        {% if trigger.id != 'esolat_doapagi' %}
+        {% set prayer_map = {'Imsak':'Imsak', 'Fajr':'Subuh', 'Syuruk':'Syuruk', 'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}
+        {% set prayer = trigger.entity_id.split('_')[-1] | title %}
+        {{ prayer_map.get(prayer, prayer) }}{% endif %}
       prayertime: >-
         {% if not trigger.id == 'esolat_doapagi' %}{{ state_attr(trigger.entity_id,'time_12h') }}{% endif %}
       prayeraudio: >-
@@ -231,9 +248,11 @@ actions:
                         {{ prayertime }} - Waktu {{ prayer }} akan tiba {{
                         reminder }} minit lagi.
                     alias: DEBUG
-                  - action: notify.notify
+                  - action: notify.send_message
                     enabled: true
                     continue_on_error: true
+                    target:
+                      entity_id: !input select_mobiledevice
                     data:
                       message: >-
                         {{ prayertime }} - Waktu {{ prayer }} akan tiba {{
@@ -283,9 +302,11 @@ actions:
                             prayer }} bagi kawasan ini dan kawasan yang sama
                             waktu dengannya.  
                         alias: DEBUG
-                      - action: notify.notify
+                      - action: notify.send_message
                         enabled: true
                         continue_on_error: true
+                        target:
+                          entity_id: !input select_mobiledevice                        
                         data:
                           message: >-
                             {{ prayertime }} - Sekarang telah masuk waktu {{
