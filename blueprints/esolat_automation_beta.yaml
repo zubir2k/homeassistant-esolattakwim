@@ -1,0 +1,473 @@
+blueprint:
+  name: 🕋 eSolat Automation Blueprint
+  homeassistant:
+    min_version: 2024.6.0
+  description: |-
+    ## v1.5.7 - eSolat prayer time notifications with azan.
+    This blueprint offers; 15 minutes reminder before Prayer time. Mobile and Audio notification support for both Google and Alexa.  For Alexa users, please ensure that the Alexa Media Player integration has been installed and setup. For local audio (e.g. VLC audio), you may use Google as both share similar method for audio playback. Miscellaneous audio comprises of takbir during Eid and morning supplication dua (currently available only on Google due to audio format not optimized for Alexa). Multiple selection of speakers is now available (However, it is still recommended to use speaker group for Google).
+  author: zubir2k
+  domain: automation
+  source_url: https://github.com/zubir2k/homeassistant-esolattakwim/blob/main/blueprints/esolat_automation_beta.yaml
+  input:
+    select_esolattakwim:
+      name: eSolat Calendar Entity
+      description: Please ensure the eSolat Takwim has been configured.
+      default: calendar.esolat_takwim
+      selector:
+        entity:
+          domain:
+          - calendar
+          integration: esolattakwim
+          multiple: false
+    chk_notification_options:
+      name: Notification Options
+      description: Select notification types to use.
+      default: []
+      selector:
+        select:
+          multiple: true
+          options:
+          - Mobile Notification
+          - Audio Notification
+          - Miscellaneous Audio
+          custom_value: false
+          sort: false
+    select_speaker_type:
+      name: Speaker Type
+      description: Type of speaker to use for the alert (Google or Alexa).
+      default: Google
+      selector:
+        select:
+          options:
+          - Google
+          - Alexa
+          custom_value: false
+          multiple: false
+          sort: false
+    select_speaker_entity:
+      name: Speaker Entity
+      description: The media player entity for the speaker. Multiple devices may be used.
+      selector:
+        entity:
+          domain:
+          - media_player
+          multiple: true
+    select_mobiledevice:
+      name: Mobile Device
+      description: The devices to send the notification to. Only works with Home Assistant mobile app. Multiple devices may
+        be used.
+      default: []
+      selector:
+        entity:
+          multiple: true
+          filter:
+          - integration: mobile_app
+            domain: notify
+    txt_audio_azan:
+      name: Azan
+      description: URL of your preferred azan audio file.
+      selector:
+        text: {}
+      default: https://github.com/zubir2k/homeassistant-esolattakwim/raw/refs/heads/main/media/azan/azan_alexa.mp3
+    txt_audio_azansubuh:
+      name: Azan Subuh
+      description: URL of your preferred azan audio file.
+      selector:
+        text: {}
+      default: https://github.com/zubir2k/homeassistant-esolattakwim/raw/refs/heads/main/media/azan/azansubuh_alexa.mp3
+    debug_section:
+      name: Debug Section
+      description: Use this to perform testing or debugging by manually trigger the automation.
+      icon: mdi:spider
+      collapsed: true
+      input:
+        chk_debug_mode:
+          name: Debug Mode
+          description: Enable variable dump and allow manual Run/debug event to use the debug inputs below.
+          default: false
+          selector:
+            boolean: {}
+        select_debug_trigger_mode:
+          name: Debug Trigger Mode
+          description: Used when running manually from UI or by firing the esolat_debug event.
+          default: esolat_time
+          selector:
+            select:
+              options:
+              - esolat_time
+              - esolat_reminder
+              - esolat_doapagi
+              custom_value: false
+              multiple: false
+              sort: false
+        select_debug_prayer:
+          name: Debug Prayer
+          description: Prayer used for manual/debug runs when trigger mode is esolat_time or esolat_reminder.
+          default: Fajr
+          selector:
+            select:
+              options:
+              - Imsak
+              - Fajr
+              - Syuruk
+              - Dhuhr
+              - Asr
+              - Maghrib
+              - Isha
+              custom_value: false
+              multiple: false
+              sort: false
+        chk_debug_notification_options:
+          name: Debug Notification Paths
+          description: When Debug Mode is ON, choose which optional paths to test during manual run or esolat_debug event.
+          default: []
+          selector:
+            select:
+              multiple: true
+              options:
+              - Mobile Notification
+              - Audio Notification
+              - Miscellaneous Audio
+              custom_value: false
+              sort: false
+        chk_debug_takbir:
+          name: Debug Takbir
+          description: When Debug Mode is ON, force takbir branch to run during miscellaneous audio testing.
+          default: false
+          selector:
+            boolean: {}
+variables:
+  esolattakwim: !input 'select_esolattakwim'
+  speaker_type: !input 'select_speaker_type'
+  speaker_entity: !input 'select_speaker_entity'
+  mobiledevice: !input 'select_mobiledevice'
+  audio_azan: !input 'txt_audio_azan'
+  audio_azansubuh: !input 'txt_audio_azansubuh'
+  notification_options: !input 'chk_notification_options'
+  debug_mode: !input 'chk_debug_mode'
+  debug_trigger_mode: !input 'select_debug_trigger_mode'
+  debug_prayer: !input 'select_debug_prayer'
+  debug_notification_options: !input 'chk_debug_notification_options'
+  debug_takbir: !input 'chk_debug_takbir'
+triggers:
+- trigger: event
+  alias: Debug
+  id: esolat_debug
+  event_type: esolat_debug
+- trigger: time
+  alias: eSolat Time
+  id: esolat_time
+  at:
+  - sensor.esolat_takwim_imsak
+  - sensor.esolat_takwim_fajr
+  - sensor.esolat_takwim_syuruk
+  - sensor.esolat_takwim_dhuhr
+  - sensor.esolat_takwim_asr
+  - sensor.esolat_takwim_maghrib
+  - sensor.esolat_takwim_isha
+- trigger: time
+  alias: eSolat Reminder
+  id: esolat_reminder
+  at:
+  - entity_id: sensor.esolat_takwim_fajr
+    offset: -00:05:00
+  - entity_id: sensor.esolat_takwim_dhuhr
+    offset: -00:15:00
+  - entity_id: sensor.esolat_takwim_asr
+    offset: -00:15:00
+  - entity_id: sensor.esolat_takwim_maghrib
+    offset: -00:15:00
+  - entity_id: sensor.esolat_takwim_isha
+    offset: -00:15:00
+- trigger: state
+  id: esolat_doapagi
+  entity_id:
+  - sun.sun
+  to: above_horizon
+conditions: []
+actions:
+- variables:
+    is_debug_context: '{% if trigger is defined and trigger.id is defined %}{{ trigger.id == ''esolat_debug'' }}{% else %}true{%
+      endif %}'
+    trigger_id: |-
+      {% if trigger is defined and trigger.id is defined and trigger.id not in [None, '', 'esolat_debug'] %}
+      {{ trigger.id }}
+      {% else %}
+      {{ debug_trigger_mode }}
+      {% endif %}
+    trigger_entity_id: |-
+      {% if trigger is defined and trigger.entity_id is defined and trigger.entity_id %}
+      {{ trigger.entity_id }}
+      {% elif trigger_id in ['esolat_time', 'esolat_reminder'] %}
+      sensor.esolat_takwim_{{ debug_prayer | lower }}
+      {% else %}
+      sun.sun
+      {% endif %}
+    effective_notification_options: '{% if is_debug_context and debug_mode %}{{ debug_notification_options }}{% else %}{{
+      notification_options }}{% endif %}'
+    prayer: |-
+      {% set prayer_map = {'Imsak':'Imsak', 'Fajr':'Subuh', 'Syuruk':'Syuruk', 'Dhuhr':'Zohor', 'Asr':'Asar', 'Maghrib':'Maghrib', 'Isha':'Isyak'} %}
+      {% if trigger_id == 'esolat_doapagi' %}
+      {{ '' }}
+      {% else %}
+      {% set prayer_key = trigger_entity_id.split('_')[-1] | title %}
+      {{ prayer_map.get(prayer_key, prayer_key) }}
+      {% endif %}
+    prayertime: |-
+      {% if trigger_id == 'esolat_doapagi' %}
+      {{ '' }}
+      {% else %}
+      {{ state_attr(trigger_entity_id, 'time_12h') }}
+      {% endif %}
+    prayeraudio: '{% if speaker_type == "Google" %} {% if prayer == "Subuh" %}{{ audio_azansubuh }}{% else %}{{ audio_azan
+      }}{% endif %} {% elif speaker_type == "Alexa" %} {% if prayer == "Subuh" %}https://audio.jukehost.co.uk/pE1eQfaeQ95nhPScUUK70lVcNN2G1WK2{%
+      else  %}https://audio.jukehost.co.uk/K85Hi00Bl73XXe4G4gKD2y3YVzphrm4p{% endif %} {% endif %}'
+    prayertts: '{% if speaker_type == "Google" %} https://github.com/zubir2k/homeassistant-esolattakwim/raw/refs/heads/main/media/tts/{%
+      if prayer == "Subuh" %}tts_subuh.mp3{% elif prayer == "Zohor" %}tts_zohor.mp3{% elif prayer == "Asar" %}tts_asar.mp3{%
+      elif prayer == "Maghrib" %}tts_maghrib.mp3{% elif prayer == "Isyak" %}tts_isyak.mp3{% endif %} {% elif speaker_type
+      == "Alexa" %} {% if prayer == "Subuh" %}https://audio.jukehost.co.uk/PtxP7htJ0dtzq3HQS2QpnDp7hKoMXsUH{% elif prayer
+      == "Zohor" %}https://audio.jukehost.co.uk/5M8l2lltXnOCEVzTyxVy1oJ8aFkstCgi{% elif prayer == "Asar" %}https://audio.jukehost.co.uk/WKHzVzYkZ4HQEg5aoMEAWNl7re0zZBWb{%
+      elif prayer == "Maghrib" %}https://audio.jukehost.co.uk/rHP1eAUqyX8fxD6RHe5GyOYs8Hpx9N9P{% elif prayer == "Isyak" %}https://audio.jukehost.co.uk/JEkNibop4Tu2BPc8sVAm6tjeLiy0poWx{%
+      endif %} {% endif %}'
+    reminder: |-
+      {% if trigger_id == 'esolat_doapagi' %}
+      {{ '' }}
+      {% elif trigger_id == 'esolat_reminder' %}
+      {% set reminder_map = {'Fajr': 5, 'Dhuhr': 15, 'Asr': 15, 'Maghrib': 15, 'Isha': 15} %}
+      {% set prayer_key = trigger_entity_id.split('_')[-1] | title %}
+      {{ reminder_map.get(prayer_key, 15) }}
+      {% else %}
+      {{ '' }}
+      {% endif %}
+  alias: Variables
+- alias: Stop manual/debug when Debug Mode is OFF
+  choose:
+  - conditions:
+    - condition: template
+      value_template: '{{ is_debug_context and not debug_mode }}'
+    sequence:
+    - stop: Manual Run / esolat_debug ignored because Debug Mode is OFF.
+- alias: Debug Variables
+  choose:
+  - conditions:
+    - condition: template
+      value_template: '{{ debug_mode }}'
+    sequence:
+    - action: persistent_notification.create
+      data:
+        title: 🕋 eSolat - Variables Debugging
+        message: is_debug_context - {{ is_debug_context }}{{ '\n' }}debug_mode - {{ debug_mode }}{{ '\n' }}raw_trigger_id
+          - {{ trigger.id if trigger is defined and trigger.id is defined else 'manual_run' }}{{ '\n' }}raw_trigger_entity_id
+          - {{ trigger.entity_id if trigger is defined and trigger.entity_id is defined else 'undefined' }}{{ '\n' }}trigger_id
+          - {{ trigger_id }}{{ '\n' }}trigger_entity_id - {{ trigger_entity_id }}{{ '\n' }}prayer - {{ prayer }}{{ '\n' }}prayertime
+          - {{ prayertime }}{{ '\n' }}reminder - {{ reminder }}{{ '\n' }}notification_options - {{ notification_options }}{{
+          '\n' }}debug_notification_options - {{ debug_notification_options }}{{ '\n' }}effective_notification_options - {{
+          effective_notification_options }}{{ '\n' }}debug_takbir - {{ debug_takbir }}{{ '\n' }}speaker_type - {{ speaker_type
+          }}{{ '\n' }}speaker_entity - {{ speaker_entity }}{{ '\n' }}mobiledevice - {{ mobiledevice }}
+        notification_id: esolat_debug
+- choose:
+  - conditions:
+    - condition: template
+      value_template: '{{ trigger_id == ''esolat_doapagi'' }}'
+    sequence:
+    - alias: Doa Pagi
+      choose:
+      - conditions:
+        - condition: template
+          value_template: '{{ "Miscellaneous Audio" in effective_notification_options }}'
+        sequence:
+        - action: media_player.play_media
+          target:
+            entity_id: !input 'select_speaker_entity'
+          data:
+            media_content_id: https://github.com/zubir2k/homeassistant-esolattakwim/raw/refs/heads/main/media/misc/doa-pagi.mp3
+            media_content_type: audio/mp3
+            extra:
+              title: Doa Pagi
+              thumb: https://i.imgur.com/obn3vGB.png
+        - delay: 00:02:53
+        - action: media_player.play_media
+          target:
+            entity_id: !input 'select_speaker_entity'
+          data:
+            media_content_id: https://github.com/zubir2k/homeassistant-esolattakwim/raw/refs/heads/main/media/misc/doa-dhuha.mp3
+            media_content_type: audio/mp3
+            extra:
+              title: Doa Dhuha
+              thumb: https://i.imgur.com/obn3vGB.png
+        - delay: 00:02:30
+        - choose:
+          - conditions:
+            - condition: template
+              value_template: '{% set raya = state_attr(''calendar.esolat_takwim'',''hijri_date'')[8:10] ~ ''-'' ~ state_attr(''calendar.esolat_takwim'',''hijri_date'')[5:7]
+                %} {{ (is_debug_context and debug_mode and debug_takbir) or raya in [''01-10'', ''10-12''] }}'
+            sequence:
+            - action: media_player.play_media
+              target:
+                entity_id: !input 'select_speaker_entity'
+              data:
+                media_content_id: https://github.com/zubir2k/homeassistant-esolattakwim/raw/refs/heads/main/media/misc/takbir.mp3
+                media_content_type: audio/mp3
+                extra:
+                  title: Takbir Raya {{ state_attr('calendar.esolat_takwim','hijri_date')[0:4] ~ 'h' }}
+                  thumb: https://i.imgur.com/obn3vGB.png
+  - conditions:
+    - condition: template
+      value_template: '{{ trigger_id == ''esolat_reminder'' }}'
+    sequence:
+    - action: persistent_notification.create
+      metadata: {}
+      data:
+        title: 🕋 eSolat - Waktu {{ prayer }} ⏰
+        message: '{{ prayertime }} - Waktu {{ prayer }} akan tiba {{ reminder }} minit lagi.'
+        notification_id: esolat_reminder
+    - alias: Mobile Notification
+      choose:
+      - conditions:
+        - condition: template
+          value_template: '{{ "Mobile Notification" in effective_notification_options and mobiledevice | count > 0 }}'
+        sequence:
+        - action: persistent_notification.create
+          enabled: false
+          metadata: {}
+          data:
+            notification_id: mobile_notice
+            title: '[MOBILE] 🕋 eSolat - Waktu {{ prayer }} ⏰'
+            message: '{{ prayertime }} - Waktu {{ prayer }} akan tiba {{ reminder }} minit lagi.'
+          alias: DEBUG
+        - action: notify.send_message
+          enabled: true
+          continue_on_error: true
+          target:
+            entity_id: !input 'select_mobiledevice'
+          data:
+            message: '{{ prayertime }} - Waktu {{ prayer }} akan tiba {{ reminder }} minit lagi.'
+            title: 🕋 eSolat - Waktu {{ prayer }} ⏰
+  - conditions:
+    - condition: template
+      value_template: '{{ trigger_id == ''esolat_time'' }}'
+    sequence:
+    - action: persistent_notification.create
+      enabled: false
+      metadata: {}
+      data:
+        title: 🕋 eSolat - Variables Debugging
+        message: prayer - {{ prayer }}{{ '\n' }} prayertime - {{ prayertime }}{{ '\n' }} notification_options - {{ notification_options
+          }}{{ '\n' }} speaker_type - {{ speaker_type }}{{ '\n' }} speaker_entity - {{ speaker_entity }}
+        notification_id: esolat_debug
+    - action: persistent_notification.create
+      metadata: {}
+      data:
+        title: 🕋 eSolat - Waktu {{ prayer }}
+        message: '{{ prayertime }} - Sekarang telah masuk waktu {{ prayer }} bagi kawasan ini dan kawasan yang sama waktu
+          dengannya.'
+        notification_id: esolat_time
+    - parallel:
+      - alias: Mobile Notification
+        choose:
+        - conditions:
+          - condition: template
+            value_template: '{{ "Mobile Notification" in effective_notification_options and mobiledevice | count > 0 }}'
+          sequence:
+          - action: persistent_notification.create
+            enabled: false
+            metadata: {}
+            data:
+              notification_id: mobile_notice
+              title: '[MOBILE] 🕋 eSolat - Waktu {{ prayer }}'
+              message: '{{ prayertime }} - Sekarang telah masuk waktu {{ prayer }} bagi kawasan ini dan kawasan yang sama
+                waktu dengannya.  '
+            alias: DEBUG
+          - action: notify.send_message
+            enabled: true
+            continue_on_error: true
+            target:
+              entity_id: !input 'select_mobiledevice'
+            data:
+              message: '{{ prayertime }} - Sekarang telah masuk waktu {{ prayer }} bagi kawasan ini dan kawasan yang sama
+                waktu dengannya.  '
+              title: 🕋 eSolat - Waktu {{ prayer }}
+      - alias: Audio Notification
+        choose:
+        - conditions:
+          - condition: template
+            value_template: '{{ "Audio Notification" in effective_notification_options and speaker_type == "Google" and prayer
+              in ["Subuh","Zohor","Asar","Maghrib","Isyak"] }}'
+            alias: Google Speaker
+          sequence:
+          - action: persistent_notification.create
+            enabled: false
+            metadata: {}
+            data:
+              title: '[AUDIO] 🔊 Google Speaker'
+              notification_id: audio_notice
+              message: 🕋 eSolat - Waktu {{ prayer }} {{ prayertime }}{{ '\n' }} Played at {{ speaker_entity }}{{ '\n' }} Audio
+                Azan {{ audio_azan }}{{ '\n' }} Audio Azan Subuh {{ audio_azansubuh }}
+            alias: DEBUG
+          - action: media_player.play_media
+            enabled: true
+            target:
+              entity_id: !input 'select_speaker_entity'
+            data:
+              media_content_type: audio/mp3
+              media_content_id: '{{ prayertts }}'
+              extra:
+                title: Azan {{ prayer }}
+                thumb: https://i.imgur.com/1U9Ehvr.png
+          - delay: 00:00:10
+          - action: media_player.play_media
+            enabled: true
+            target:
+              entity_id: !input 'select_speaker_entity'
+            data:
+              media_content_type: audio/mp3
+              media_content_id: '{{ prayeraudio }}'
+              extra:
+                title: Azan {{ prayer }}
+                thumb: https://i.imgur.com/1U9Ehvr.png
+          - delay: 00:03:40
+          - choose:
+            - conditions:
+              - condition: template
+                value_template: '{% set day = state_attr(''calendar.esolat_takwim'',''hijri_date'')[8:10] %} {% set month
+                  = state_attr(''calendar.esolat_takwim'',''hijri_date'')[5:7] %} {% set time_now = state_attr(''calendar.esolat_takwim'',''current'')
+                  %} {{ "Miscellaneous Audio" in effective_notification_options and speaker_type == "Google" and ((is_debug_context
+                  and debug_mode and debug_takbir) or (((month == ''12'' and day >= ''09'' and day <= ''13'' and time_now
+                  in [''Fajr'', ''Dhuhr'', ''Asr'', ''Maghrib'', ''Isha'']) or (month == ''09'' and day == ''29'' and time_now
+                  in [''Maghrib'', ''Isha''])))) }}'
+              sequence:
+              - action: media_player.play_media
+                data:
+                  media_content_type: audio/mp3
+                  media_content_id: https://github.com/zubir2k/homeassistant-esolattakwim/raw/refs/heads/main/media/misc/takbir.mp3
+                  extra:
+                    title: Takbir Raya {{ state_attr('calendar.esolat_takwim','hijri_date')[0:4] ~ 'h' }}
+                    thumb: https://i.imgur.com/obn3vGB.png
+                target:
+                  entity_id: !input 'select_speaker_entity'
+          alias: Google
+        - conditions:
+          - condition: template
+            value_template: '{{ "Audio Notification" in effective_notification_options and speaker_type == "Alexa" and prayer
+              in ["Subuh","Zohor","Asar","Maghrib","Isyak"] }}'
+            alias: Amazon Alexa
+          sequence:
+          - action: persistent_notification.create
+            enabled: false
+            metadata: {}
+            data:
+              title: '[AUDIO] 🔊 Alexa Speaker'
+              notification_id: audio_notice
+              message: 🕋 eSolat - Waktu {{ prayer }} {{ prayertime }}{{ '\n' }} Played at {{ speaker_entity | replace('media_player.','notify.alexa_media_')
+                }}
+            alias: DEBUG
+          - action: notify.alexa_media
+            enabled: true
+            continue_on_error: true
+            data:
+              data:
+                type: tts
+              target: '{{ speaker_entity }}'
+              message: '<audio src=''{{ prayertts }}''/><audio src=''{{ prayeraudio }}''/>                            '
+          alias: Alexa
+mode: single
