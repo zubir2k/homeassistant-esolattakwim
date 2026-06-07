@@ -77,8 +77,17 @@ Features:
 > Due to some limitation on the Alexa media playback, I had to make the audio permanent and could not be changed 
 > (both announcement and adhan itself). Only applicable to Alexa speaker 🔊
 
-## 🎖️ Disclaimer/Credits
-Takwim and prayer time data are provided by [e-solat](https://www.e-solat.gov.my/) JAKIM (Department of Islamic Development Malaysia)
+## 📢 Disclaimer & Data Source
 
-## 📢 Join the Community
-[Home Assistant Malaysia](https://www.facebook.com/groups/homeassistantmalaysia)
+### Important Notice & Reliability Disclaimer
+This integration pulls data directly from the official **e-Solat JAKIM (Department of Islamic Development Malaysia)** portal. However, please note:
+
+- **No Liability:** This integration is a community-driven project provided "as is" without any guarantees. The maintainer is **not solely or legally responsible** for any discrepancies, inaccuracies, delays, or omissions in prayer times or calendar dates.
+- **Verify Important Times:** Users are strictly advised to regularly check and verify times against the official **[JAKIM eSolat Portal](https://www.e-solat.gov.my/)** or official local announcements, especially for critical obligations (e.g., fasting, community prayers).
+- **Network & Upstream Dependencies:** Synchronization depends on upstream API availability and local network connectivity. Discrepancies caused by unexpected server updates from JAKIM or local server downtime are outside the control of this software.
+
+*By using this integration, you acknowledge and agree that the developer holds no liability for missed schedules or data inaccuracies.*
+
+## 🎖️ Credits
+- Takwim and prayer time data are provided by [e-solat](https://www.e-solat.gov.my/) JAKIM (Department of Islamic Development Malaysia)
+- Join our Community [Home Assistant Malaysia](https://www.facebook.com/groups/homeassistantmalaysia)
