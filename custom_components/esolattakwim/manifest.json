@@ -1,6 +1,7 @@
 {
   "domain": "esolattakwim",
   "name": "eSolat Takwim Malaysia",
+  "categories": ["productivity_information.calendars_todos"],
   "codeowners": ["@zubir2k"],
   "config_flow": true,
   "documentation": "https://github.com/zubir2k/homeassistant-esolattakwim",
