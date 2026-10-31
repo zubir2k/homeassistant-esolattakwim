@@ -12,5 +12,16 @@
         "abort": {
             "single_instance_allowed": "Hanya satu entiti dibenarkan."
         }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "eSolat Takwim Malaysia",
+                "description": "Tukar zon JAKIM anda. Jadual waktu solat setahun untuk zon baharu akan dimuat turun sekali.",
+                "data": {
+                    "zone": "Zon"
+                }
+            }
+        }
     }
 }

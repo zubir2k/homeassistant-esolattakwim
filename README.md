@@ -18,7 +18,8 @@ May this be beneficial to all, InshaAllah
 
 
 ## 🚩 Features
-- Automatic prayer time retrieval from JAKIM (and stored locally)
+- A full year of JAKIM prayer times stored locally, so day-to-day use needs no internet
+- Next year's timetable prefetched in December, so 1 January needs no download
 - Takwim/Calendar information from JAKIM
 - Prayer time information available as attributes in the calendar entity
 - Prayer time format in Datetime UTC (e.g. 2023-07-29T22:01:00+00:00)
@@ -50,6 +51,19 @@ May this be beneficial to all, InshaAllah
 > 4. Select location zone to your preference
 
 ![image](https://github.com/user-attachments/assets/7071de5a-1d22-4f89-9162-02fc1b5a782e)
+
+To change zone later: Settings → Devices & Services → eSolat Takwim Malaysia → Configure.
+
+### How data is kept
+The integration downloads your zone's timetable for the whole year once and keeps it in `.storage/esolattakwim.cache`. After that, prayer times, the Hijri date, `current`/`next` and calendar events are all worked out locally.
+
+JAKIM is only contacted when:
+- this year's timetable is missing (first setup, a zone change, or a new year without a prefetch);
+- the stored year is a week old, to pick up any revision from JAKIM;
+- it is December and next year isn't stored yet (tried once a day until JAKIM publishes it);
+- the Islamic events list is a week old.
+
+If JAKIM is unreachable, the stored timetable keeps everything working. Removing the integration deletes the stored file.
 
 ## 🪄 Prayer Time Markdown Card
 I have prepared a markdown card template for this integration.

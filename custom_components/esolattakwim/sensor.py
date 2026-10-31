@@ -2,128 +2,100 @@
 from __future__ import annotations
 
 from datetime import datetime
-import logging
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.event import async_track_time_change
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, TIMEZONE, HIJRI_MONTHS, get_device_info
-from .prayer_times import PrayerTimesData
+from .const import DOMAIN, HIJRI_MONTHS, PRAYER_NAMES, TIMEZONE
+from .coordinator import TakwimConfigEntry, TakwimCoordinator
+from .entity import TakwimEntity
 
-_LOGGER = logging.getLogger(__name__)
+PARALLEL_UPDATES = 0
 
-PRAYER_SENSORS = ["imsak", "fajr", "syuruk", "dhuhr", "asr", "maghrib", "isha"]
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    config_entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant, entry: TakwimConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    """Set up the eSolat Takwim Malaysia sensor platform."""
-    zone = config_entry.data["zone"]
-    prayer_times = PrayerTimesData(zone, hass)
-    await prayer_times.load_cached_data()
+    coordinator = entry.runtime_data
+    async_add_entities(
+        [HijriSensor(coordinator, entry.entry_id)]
+        + [PrayerTimeSensor(coordinator, entry.entry_id, prayer) for prayer in PRAYER_NAMES]
+    )
 
-    entities = [HijriSensor(hass, prayer_times, config_entry.entry_id)]
-    entities.extend(PrayerTimeSensor(hass, prayer_times, prayer, config_entry.entry_id) for prayer in PRAYER_SENSORS)
-    async_add_entities(entities, True)
 
-class PrayerTimeSensor(SensorEntity):
-    """Representation of a prayer time sensor."""
+def hijri_text(raw: str | None) -> str | None:
+    """'1448-05-20' -> '20 Jamadil Awwal 1448'."""
+    try:
+        year, month, day = (raw or "").split("-")
+        return f"{int(day):02d} {HIJRI_MONTHS[month]} {year}"
+    except (ValueError, KeyError):
+        return None
+
+
+class _DailySensor(TakwimEntity, SensorEntity):
+    """Re-renders just after midnight, when 'today' moves on, without any API call."""
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+
+        @callback
+        def _midnight(_now: datetime) -> None:
+            self.async_write_ha_state()
+
+        self.async_on_remove(async_track_time_change(self.hass, _midnight, hour=0, minute=0, second=1))
+
+
+class PrayerTimeSensor(_DailySensor):
+    """Today's time for one prayer (sensor.esolat_takwim_fajr)."""
 
     _attr_device_class = SensorDeviceClass.TIMESTAMP
-    _attr_has_entity_name = True
+    _attr_icon = "mdi:star-crescent"
 
-    def __init__(self, hass: HomeAssistant, prayer_times: PrayerTimesData, prayer: str, entry_id: str) -> None:
-        """Initialize the prayer time sensor."""
-        self.hass = hass
-        self._prayer_times = prayer_times
+    def __init__(self, coordinator: TakwimCoordinator, entry_id: str, prayer: str) -> None:
+        super().__init__(coordinator)
         self._prayer = prayer
         self._attr_name = prayer.capitalize()
         self._attr_unique_id = f"{DOMAIN}_{entry_id}_{prayer}"
         self.entity_id = f"sensor.esolat_takwim_{prayer}"
-        self._attr_icon = "mdi:star-crescent"
-        self._state = None
-        self._attributes = {}
-        self._attr_entity_registry_enabled_default = True
-        self._attr_entity_registry_visible_default = True
+
+    def _at(self) -> datetime | None:
+        return self.coordinator.prayer_times(dt_util.now(TIMEZONE).date()).get(self._prayer)
 
     @property
-    def state(self) -> str | None:
-        """Return the state of the sensor (UTC timestamp)."""
-        return self._state
+    def native_value(self) -> datetime | None:
+        at = self._at()
+        return dt_util.as_utc(at) if at else None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Return the state attributes."""
-        return self._attributes
-    
-    async def async_update(self) -> None:
-        """Update the sensor state and attributes."""
-        prayer_times = self._prayer_times.get_prayer_times_utc()
-        utc_time = prayer_times.get(self._prayer)
-        self._state = utc_time if utc_time else None
-        if utc_time and utc_time != "unknown":
-            local_dt = dt_util.parse_datetime(utc_time).astimezone(TIMEZONE)
-            self._attributes = {
-                "time_12h": local_dt.strftime("%I:%M %p"),
-                "time_24h": local_dt.strftime("%H:%M"),
-            }
-        else:
-            self._attributes = {"time_12h": "Unknown", "time_24h": "Unknown"}
-    @property
-    def device_info(self):
-        return get_device_info(self._prayer_times._zone)
+        at = self._at()
+        if at is None:
+            return {"time_12h": "Unknown", "time_24h": "Unknown"}
+        return {"time_12h": at.strftime("%I:%M %p"), "time_24h": at.strftime("%H:%M")}
 
-class HijriSensor(SensorEntity):
-    """Representation of a Hijri date sensor."""
 
-    _attr_has_entity_name = True
+class HijriSensor(_DailySensor):
+    """Today's Hijri date as published by JAKIM."""
+
     _attr_icon = "mdi:calendar"
+    _attr_name = "Hijri Date"
 
-    def __init__(self, hass: HomeAssistant, prayer_times: PrayerTimesData, entry_id: str) -> None:
-        """Initialize the Hijri date sensor."""
-        self.hass = hass
-        self._prayer_times = prayer_times
-        self._attr_name = "Hijri Date"
+    def __init__(self, coordinator: TakwimCoordinator, entry_id: str) -> None:
+        super().__init__(coordinator)
         self._attr_unique_id = f"{DOMAIN}_{entry_id}_hijri"
-        self.entity_id = f"sensor.esolat_takwim_hijri"
-        self._attr_icon = "mdi:calendar"
-        self._state = None
-        self._attributes = {}
-        self._attr_entity_registry_enabled_default = True
-        self._attr_entity_registry_visible_default = True
+        self.entity_id = "sensor.esolat_takwim_hijri"
+
+    def _raw(self) -> str | None:
+        return self.coordinator.day(dt_util.now(TIMEZONE).date()).get("hijri") or None
 
     @property
-    def state(self) -> str | None:
-        """Return the state of the sensor (full Hijri text)."""
-        return self._state
+    def native_value(self) -> str | None:
+        return hijri_text(self._raw())
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Return the state attributes."""
-        return self._attributes
-    
-    async def async_update(self) -> None:
-        """Update the sensor state and attributes."""
-        today_date = dt_util.now(TIMEZONE).strftime("%d-%b-%Y")
-        today_prayer_times = self._prayer_times._daily_prayer_times.get(today_date, {})
-        hijri_date = today_prayer_times.get("hijri")
-
-        if hijri_date:
-            hijri_year, hijri_month, hijri_day = hijri_date.split("-")
-            month_name = HIJRI_MONTHS.get(hijri_month, "Unknown")
-            self._state = f"{int(hijri_day):02d} {month_name} {hijri_year}"
-            self._attributes = {"date": hijri_date}
-        else:
-            self._state = "Unknown"
-            self._attributes = {"date": "Unknown"}
-            
-    @property
-    def device_info(self):
-        return get_device_info(self._prayer_times._zone)
-    
+        return {"date": self._raw() or "Unknown"}

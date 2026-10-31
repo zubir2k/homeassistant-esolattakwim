@@ -1,5 +1,4 @@
 """Constants for the eSolat Takwim Malaysia integration."""
-from datetime import timedelta
 from zoneinfo import ZoneInfo
 from homeassistant.helpers.device_registry import DeviceEntryType
 import json
@@ -11,7 +10,6 @@ MANIFEST = json.loads(
 VERSION = MANIFEST["version"]
 
 DOMAIN = "esolattakwim"
-SCAN_INTERVAL = timedelta(days=1)
 TIMEZONE = ZoneInfo("Asia/Kuala_Lumpur")
 
 # API endpoints

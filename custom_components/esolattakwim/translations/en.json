@@ -1,14 +1,27 @@
-{"config": {
-    "step": {
-        "user": {
-            "data": {
-                "zone": "Zone"
-            },
-            "description": "Select your zone for prayer times calculation.",
-            "title": "eSolat Takwim Malaysia"
+{
+    "config": {
+        "step": {
+            "user": {
+                "data": {
+                    "zone": "Zone"
+                },
+                "description": "Select your zone for prayer times calculation.",
+                "title": "eSolat Takwim Malaysia"
+            }
+        },
+        "abort": {
+            "single_instance_allowed": "Only a single instance is allowed."
         }
     },
-    "abort": {
-        "single_instance_allowed": "Only a single instance is allowed."
+    "options": {
+        "step": {
+            "init": {
+                "title": "eSolat Takwim Malaysia",
+                "description": "Change your JAKIM zone. The new zone's timetable for the year is downloaded once.",
+                "data": {
+                    "zone": "Zone"
+                }
+            }
+        }
     }
-}}
+}

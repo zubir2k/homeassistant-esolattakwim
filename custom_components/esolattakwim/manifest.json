@@ -1,13 +1,18 @@
 {
   "domain": "esolattakwim",
   "name": "eSolat Takwim Malaysia",
-  "categories": ["productivity_information.calendars_todos"],
-  "codeowners": ["@zubir2k"],
+  "categories": [
+    "productivity_information.calendars_todos"
+  ],
+  "codeowners": [
+    "@zubir2k"
+  ],
   "config_flow": true,
   "documentation": "https://github.com/zubir2k/homeassistant-esolattakwim",
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/zubir2k/homeassistant-esolattakwim/issues",
-  "requirements": ["aiohttp>=3.8.0", "voluptuous>=0.13.1", "aiofiles>=23.2.1"],
-  "version": "0.3.5"
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "0.4.0"
 }
