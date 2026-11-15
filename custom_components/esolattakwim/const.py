@@ -1,15 +1,9 @@
 """Constants for the eSolat Takwim Malaysia integration."""
 from zoneinfo import ZoneInfo
 from homeassistant.helpers.device_registry import DeviceEntryType
-import json
-from pathlib import Path
-
-MANIFEST = json.loads(
-    (Path(__file__).parent / "manifest.json").read_text()
-)
-VERSION = MANIFEST["version"]
 
 DOMAIN = "esolattakwim"
+VERSION = "0.4.0"
 TIMEZONE = ZoneInfo("Asia/Kuala_Lumpur")
 
 # API endpoints
@@ -106,10 +100,12 @@ ZONES = {
     "wly02": "WLY02 - Labuan"
 }
 
-def get_device_info(zone: str) -> dict:
+def get_device_info(entry_id: str, zone: str | None = None) -> dict:
     """Return shared device info for all eSolat entities."""
+    if zone is None:
+        zone = entry_id
     return {
-        "identifiers": {(DOMAIN, f"service_{zone.lower()}")},
+        "identifiers": {(DOMAIN, entry_id)},
         "name": "eSolat Takwim Malaysia",
         "manufacturer": "JAKIM / e-Solat",
         "model": f"Prayer Times Service ({zone.upper()})",

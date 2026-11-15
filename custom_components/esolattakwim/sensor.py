@@ -59,6 +59,7 @@ class PrayerTimeSensor(_DailySensor):
         super().__init__(coordinator)
         self._prayer = prayer
         self._attr_name = prayer.capitalize()
+        self._attr_translation_key = prayer
         self._attr_unique_id = f"{DOMAIN}_{entry_id}_{prayer}"
         self.entity_id = f"sensor.esolat_takwim_{prayer}"
 
@@ -86,6 +87,7 @@ class HijriSensor(_DailySensor):
 
     def __init__(self, coordinator: TakwimCoordinator, entry_id: str) -> None:
         super().__init__(coordinator)
+        self._attr_translation_key = "hijri"
         self._attr_unique_id = f"{DOMAIN}_{entry_id}_hijri"
         self.entity_id = "sensor.esolat_takwim_hijri"
 

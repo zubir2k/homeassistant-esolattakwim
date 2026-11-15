@@ -43,7 +43,7 @@ def _end(event: CalendarEvent) -> datetime:
 class EsolatCalendar(TakwimEntity, CalendarEntity):
     """calendar.esolat_takwim"""
 
-    _attr_name = "eSolat Takwim"
+    _attr_name = None
     _attr_unique_id = "esolat_takwim"
 
     def __init__(self, coordinator: TakwimCoordinator) -> None:

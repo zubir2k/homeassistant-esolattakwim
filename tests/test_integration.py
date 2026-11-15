@@ -174,3 +174,63 @@ async def test_config_flow(hass: HomeAssistant, aioclient_mock, frozen) -> None:
     await hass.async_block_till_done()
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
     assert result["type"] == "abort"
+
+
+async def test_reconfigure_flow(hass: HomeAssistant, aioclient_mock, frozen) -> None:
+    jakim = FakeJakim(aioclient_mock)
+    entry = await setup(hass)
+    assert entry.data["zone"] == "sgr01"
+
+    result = await entry.start_reconfigure_flow(hass)
+    assert result["type"] == "form"
+    assert result["step_id"] == "reconfigure"
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {"zone": "wly01"},
+    )
+    assert result["type"] == "abort"
+    assert result["reason"] == "reconfigure_successful"
+    await hass.async_block_till_done()
+
+    assert entry.data["zone"] == "wly01"
+    assert ("WLY01", "2026-01-01") in jakim.calls
+
+
+async def test_diagnostics(hass: HomeAssistant, aioclient_mock, frozen) -> None:
+    FakeJakim(aioclient_mock)
+    entry = await setup(hass)
+
+    from custom_components.esolattakwim.diagnostics import async_get_config_entry_diagnostics
+
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    assert diag["entry"]["entry_id"] == entry.entry_id
+    assert diag["entry"]["data"]["zone"] == "sgr01"
+    assert diag["coordinator"]["zone"] == "sgr01"
+    assert diag["coordinator"]["days_count"] == 365
+    assert diag["coordinator"]["today_date"] == "2026-10-31"
+    assert "fajr" in diag["coordinator"]["today_prayer_times"]
+
+
+async def test_device_registry_stability(hass: HomeAssistant, aioclient_mock, frozen) -> None:
+    from homeassistant.helpers import device_registry as dr
+    from custom_components.esolattakwim.const import DOMAIN
+
+    FakeJakim(aioclient_mock)
+    entry = await setup(hass)
+    dev_reg = dr.async_get(hass)
+
+    device = dev_reg.async_get_device(identifiers={(DOMAIN, entry.entry_id)})
+    assert device is not None
+    assert device.model == "Prayer Times Service (SGR01)"
+
+    result = await entry.start_reconfigure_flow(hass)
+    await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {"zone": "wly01"},
+    )
+    await hass.async_block_till_done()
+
+    device = dev_reg.async_get_device(identifiers={(DOMAIN, entry.entry_id)})
+    assert device is not None
+    assert device.model == "Prayer Times Service (WLY01)"

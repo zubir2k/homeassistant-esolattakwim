@@ -1,0 +1,35 @@
+{
+  "entity": {
+    "calendar": {
+      "takwim": {
+        "default": "mdi:calendar-clock"
+      }
+    },
+    "sensor": {
+      "hijri": {
+        "default": "mdi:calendar"
+      },
+      "imsak": {
+        "default": "mdi:weather-sunset-up"
+      },
+      "fajr": {
+        "default": "mdi:weather-sunset-up"
+      },
+      "syuruk": {
+        "default": "mdi:weather-sunny"
+      },
+      "dhuhr": {
+        "default": "mdi:weather-sunny"
+      },
+      "asr": {
+        "default": "mdi:weather-sunset-down"
+      },
+      "maghrib": {
+        "default": "mdi:weather-sunset"
+      },
+      "isha": {
+        "default": "mdi:weather-night"
+      }
+    }
+  }
+}

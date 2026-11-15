@@ -7,9 +7,18 @@
                 },
                 "description": "Select your zone for prayer times calculation.",
                 "title": "eSolat Takwim Malaysia"
+            },
+            "reconfigure": {
+                "data": {
+                    "zone": "Zone"
+                },
+                "description": "Update your JAKIM zone for prayer times.",
+                "title": "Reconfigure eSolat Takwim Malaysia"
             }
         },
         "abort": {
+            "already_configured": "[%key:common::config_flow::abort::already_configured%]",
+            "reconfigure_successful": "[%key:common::config_flow::abort::reconfigure_successful%]",
             "single_instance_allowed": "[%key:common::config_flow::abort::single_instance_allowed%]"
         }
     },
@@ -21,6 +30,34 @@
                 "data": {
                     "zone": "Zone"
                 }
+            }
+        }
+    },
+    "entity": {
+        "sensor": {
+            "hijri": {
+                "name": "Hijri Date"
+            },
+            "imsak": {
+                "name": "Imsak"
+            },
+            "fajr": {
+                "name": "Fajr"
+            },
+            "syuruk": {
+                "name": "Syuruk"
+            },
+            "dhuhr": {
+                "name": "Dhuhr"
+            },
+            "asr": {
+                "name": "Asr"
+            },
+            "maghrib": {
+                "name": "Maghrib"
+            },
+            "isha": {
+                "name": "Isha"
             }
         }
     }

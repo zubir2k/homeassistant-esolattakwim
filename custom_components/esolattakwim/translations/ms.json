@@ -7,9 +7,18 @@
                 },
                 "description": "Pilih zon anda untuk paparan waktu solat.",
                 "title": "eSolat Takwim Malaysia"
+            },
+            "reconfigure": {
+                "data": {
+                    "zone": "Zon"
+                },
+                "description": "Kemas kini zon JAKIM anda untuk waktu solat.",
+                "title": "Konfigurasi Semula eSolat Takwim Malaysia"
             }
         },
         "abort": {
+            "already_configured": "Perkhidmatan ini telah dikonfigurasikan.",
+            "reconfigure_successful": "Konfigurasi semula berjaya.",
             "single_instance_allowed": "Hanya satu entiti dibenarkan."
         }
     },
@@ -21,6 +30,34 @@
                 "data": {
                     "zone": "Zon"
                 }
+            }
+        }
+    },
+    "entity": {
+        "sensor": {
+            "hijri": {
+                "name": "Tarikh Hijri"
+            },
+            "imsak": {
+                "name": "Imsak"
+            },
+            "fajr": {
+                "name": "Subuh"
+            },
+            "syuruk": {
+                "name": "Syuruk"
+            },
+            "dhuhr": {
+                "name": "Zohor"
+            },
+            "asr": {
+                "name": "Asar"
+            },
+            "maghrib": {
+                "name": "Maghrib"
+            },
+            "isha": {
+                "name": "Isyak"
             }
         }
     }
