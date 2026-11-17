@@ -5,12 +5,16 @@ import logging
 
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import config_validation as cv
 
+from .const import DOMAIN
 from .coordinator import LEGACY_STORAGE_KEYS, TakwimConfigEntry, TakwimCoordinator, cache_store
 
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [Platform.CALENDAR, Platform.SENSOR]
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: TakwimConfigEntry) -> bool:
