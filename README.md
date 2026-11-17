@@ -26,11 +26,11 @@ May this be beneficial to all, InshaAllah
 - `current` and `next` prayer time indicator available as attribute
 
 ## 🕹️ Installation
-#### With HACS
+#### With Marketplace/HACS
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=zubir2k&repository=homeassistant-esolattakwim&category=integration)
 
 > [!Tip]
-> If you are unable to use the button above, manually search for eSolat Takwim in HACS.
+> If you are unable to use the button above, manually search for eSolat Takwim in Marketplace/HACS.
 
 #### Manual
 1. Copy the `esolattakwim` directory from `custom_components` in this repository and place inside your Home Assistant's `custom_components` directory.
