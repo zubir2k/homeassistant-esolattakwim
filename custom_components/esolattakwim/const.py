@@ -3,7 +3,7 @@ from zoneinfo import ZoneInfo
 from homeassistant.helpers.device_registry import DeviceEntryType
 
 DOMAIN = "esolattakwim"
-VERSION = "0.4.0"
+VERSION = "0.4.3"
 TIMEZONE = ZoneInfo("Asia/Kuala_Lumpur")
 
 # API endpoints
