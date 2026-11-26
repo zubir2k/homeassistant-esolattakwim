@@ -17,4 +17,4 @@ jobs:
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
       - name: Run pytest
-        run: uv run --python ${{ matrix.python-version }} --with pytest --with pytest-homeassistant-custom-component pytest
+        run: uv run --python ${{ matrix.python-version }} --with pytest --with pytest-homeassistant-custom-component --with python-esolat pytest

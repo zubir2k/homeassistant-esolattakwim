@@ -4,7 +4,6 @@ from homeassistant.helpers.device_registry import DeviceEntryType
 
 from esolat import (
     API_ENDPOINTS,
-    HIJRI_MONTHS,
     ZONES as ESOLAT_ZONES,
 )
 

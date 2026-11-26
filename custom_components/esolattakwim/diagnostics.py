@@ -3,11 +3,14 @@ from __future__ import annotations
 
 from typing import Any
 
+from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
 from .const import TIMEZONE
 from .coordinator import TakwimConfigEntry
+
+TO_REDACT: set[str] = set()
 
 
 async def async_get_config_entry_diagnostics(
@@ -24,8 +27,8 @@ async def async_get_config_entry_diagnostics(
             "version": entry.version,
             "domain": entry.domain,
             "title": entry.title,
-            "data": dict(entry.data),
-            "options": dict(entry.options),
+            "data": async_redact_data(dict(entry.data), TO_REDACT),
+            "options": async_redact_data(dict(entry.options), TO_REDACT),
         },
         "coordinator": {
             "zone": coordinator.zone,
